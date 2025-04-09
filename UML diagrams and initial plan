@@ -1,0 +1,76 @@
+         <<abstract>> Creature
+         ------------------------------
+         - health: int
+         - attackPower: int
+         ------------------------------
+         + Attack(): void
+         + TakeDamage(damage: int): void
+         ------------------------------
+                  ▲
+    --------------------------------
+    |                              |
+   Player                        Monster
+    ------------------------------         ------------------------------
+    - inventory: Inventory      - monsterType: string        (Specialize further into e.g., Goblin, Dragon)
+    - currentRoom: Room
+    ------------------------------
+    + Move(direction: Direction): void
+    + UseItem(item: Item): void
+    ------------------------------
+
+                    Item
+         ------------------------------
+         - name: string
+         - description: string
+         ------------------------------
+         + Use(): void
+         ------------------------------
+                  ▲
+         ------------------------------
+         |                            |
+      Weapon                      Potion
+         ------------------------------
+
+                Inventory
+         ------------------------------
+         - items: List<Item>
+         ------------------------------
+         + AddItem(item: Item): void
+         + RemoveItem(item: Item): void
+         + GetItemsByType<T>(): List<T>   // Uses LINQ and lambda expressions for filtering
+         ------------------------------
+
+                GameMap
+         ------------------------------
+         - rooms: List<Room>
+         ------------------------------
+         + GetRoom(id: int): Room
+         + ConnectRooms(room1: Room, room2: Room): void
+         ------------------------------
+
+                Room
+         ------------------------------
+         - roomID: int
+         - monsters: List<Monster>
+         - items: List<Item>
+         - exits: Dictionary<Direction, Room>  // Direction can be an enum (e.g., North, South...)
+         ------------------------------
+         + EnterRoom(creature: Creature): void
+         + ExitRoom(creature: Creature): void
+         ------------------------------
+
+                Game
+         ------------------------------
+         - player: Player
+         - gameMap: GameMap
+         - currentRoom: Room    // Alternatively, this could be derived from gameMap & player state
+         ------------------------------
+         + Start(): void             // Initializes game components and begins the game loop
+         + ProcessInput(input: string): void  // Handles user commands
+         + UpdateGameState(): void   // Updates game logic (e.g., combat, movement, interactions)
+         ------------------------------
+
+                Program
+         ------------------------------
+         + Main(args: string[]): void  // Entry point of the application
+         ------------------------------
