@@ -1,0 +1,94 @@
+using System;
+using System.Collecttions.Generic;
+using System.IO;
+
+public interface IDamageable
+{
+    void TakeDamage(int damage)
+
+} 
+
+public class abstract Creature : IDamageable
+{
+    // Main common properties
+    public string name {get;protected set;}
+    public int health {get; protected set;}
+
+    // Additional common properties
+    public int attackStrength {get; protected set;}
+    public bool state {get; protected set;}
+    public int defenseScore {get; protected set;}
+
+    //Constructor (for common properties of creature)
+    public void Creature (string name, int health , int attackStrength , bool state , int defenseScore)
+    {
+        Name = name ;
+        Health = health ;
+        AttackStrength = attackStrength ;
+        State = state ;
+        DefenseScore = defenseScore ;
+    } 
+
+    // Abstract method (Attack)
+    public abstract void Attack (Creature target)
+    {
+
+    }
+
+    // Abstarct method (Move)
+    public abstract void Move (Creature target)
+    {
+
+    }
+    
+
+    // Default method used by all creatures for accepting damage: (Extra intitialization could occur by overriding)
+
+    public virtual void TakeDamage(int damage)
+    {
+        public int effectiveDamage =  damage - DefenseScore ;
+
+        //Make sure that the effectiveDamage is ALWAYS positive
+
+        if (effectiveDamage < 0)
+        {
+            effectiveDamage = 0 ;
+
+
+        }
+
+        Health -= effectiveDamage;
+
+        // Make sure Health is ALWAYS positive and check for defeat or not
+
+        if (Health <= 0)
+        {
+            Health = 0;
+            Console.WriteLine($"This Creature {Name} is defeated !");
+        }
+
+
+
+
+        
+
+        
+
+    }
+
+
+    // Default method used by all creatures for healing points: (Extra intitialization could occur by overriding)
+
+    public virtual void ApplyHealing(int heal)
+    {
+        Health += heal;
+        Console.WriteLine($"{Name} has healed {heal} points ! ");
+    }
+
+
+
+
+
+    
+
+}
