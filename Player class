@@ -1,0 +1,23 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using DungeonExplorer;
+
+namespace DungeonExplorer
+{
+    public class Player: Creature
+    {
+        // Contructor : initialize the common properties
+        public void Player (string name , int health , int attackPower , bool state , int defenseScore): base( name ,  health ,  attackPower ,  state ,  defenseScore)
+        {
+
+        }
+
+        public override void Attack (Creature target)
+        {
+            
+        }
+
+    }
+}

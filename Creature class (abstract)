@@ -1,94 +1,70 @@
 using System;
-using System.Collecttions.Generic;
-using System.IO;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using DungeonExplorer;
+using System.Runtime.Runtime.Serialization.Formatters.Binary;
 
-public interface IDamageable
+namespace DungeonExplorer
 {
-    void TakeDamage(int damage)
+   // Interface (ICollectible) for items
 
-} 
+   public interface ICollectible
+   {
+    void Use();
+   } 
 
-public class abstract Creature : IDamageable
-{
-    // Main common properties
-    public string name {get;protected set;}
-    public int health {get; protected set;}
+   // Interface (IDamageable) for accepting damage
 
-    // Additional common properties
-    public int attackStrength {get; protected set;}
-    public bool state {get; protected set;}
-    public int defenseScore {get; protected set;}
-
-    //Constructor (for common properties of creature)
-    public void Creature (string name, int health , int attackStrength , bool state , int defenseScore)
+   public interface IDamageable
     {
-        Name = name ;
-        Health = health ;
-        AttackStrength = attackStrength ;
-        State = state ;
-        DefenseScore = defenseScore ;
+     void TakeDamage(int damage)
+
     } 
 
-    // Abstract method (Attack)
-    public abstract void Attack (Creature target)
-    {
+   public class abstract Creature : IDamageable
+   {
+     // Main common properties
+     public string name {get;protected set;} // Any part of the code could read the name , but only this class and its subclasses could assign them.
+     protected int health; // (E) (Protected) => visible to the Creature class and its subclasses , but hidden from any irrelevant classes (Ensuring Encapsulation).
+     public int Health => health; // LINQ expression * (Read-only property)
+     public bool ALive => health > 0; // LINQ expression * (Read-only property) , returns true (if health is more than zero).
 
-    }
+     // Constructor (Protected) => Can not be initialized , but subclasses could call it via base(...)
+     protected Creature (string name, int health) 
+     {
+       // Error handling for name entry
+       Debug.Assert(!string.IsNullOrWhiteSpace(name), "Creature name can not be left empty of null! ");
+       Debug.Assert(health > 0 , "Health needs to be positive! "); // Ensures health is always positive.
+       Name = name;
+       this.health = health; // *initializes the internal "health" field to the passed-in value
+     }
 
-    // Abstarct method (Move)
-    public abstract void Move (Creature target)
-    {
+     public virtual void Damage (int value) // Virtual => allows subclasses to override this method if they need special "damage" logic.
+     {
+      Debug.Assert(value >= 0 , "Damage value needs to be positive! "); // Ensure damage value is always positive.
+      health = Math.Max(0, health - value); // Ensures that no negative points are used.
+     }
 
-    }
-    
+     // Dynamic polymorphism for different attack behaviours for different monsters
+     public abstract void Attack (Player player); // Every concrete subclass MUST implement.
+   }
 
-    // Default method used by all creatures for accepting damage: (Extra intitialization could occur by overriding)
+   // Player class 
+   public class Player : Creature
+   {
+      public Inventory Inventory {get; } = new Inventory();
+      public int Score {get; private set; }
+      public int Level {get; private set; }
 
-    public virtual void TakeDamage(int damage)
-    {
-        public int effectiveDamage =  damage - DefenseScore ;
-
-        //Make sure that the effectiveDamage is ALWAYS positive
-
-        if (effectiveDamage < 0)
-        {
-            effectiveDamage = 0 ;
-
-
-        }
-
-        Health -= effectiveDamage;
-
-        // Make sure Health is ALWAYS positive and check for defeat or not
-
-        if (Health <= 0)
-        {
-            Health = 0;
-            Console.WriteLine($"This Creature {Name} is defeated !");
-        }
-
-
-
-
-        
-
-        
-
-    }
+      // Static polymorphism (Overloaded constructers)
+      
+   }
 
 
-    // Default method used by all creatures for healing points: (Extra intitialization could occur by overriding)
-
-    public virtual void ApplyHealing(int heal)
-    {
-        Health += heal;
-        Console.WriteLine($"{Name} has healed {heal} points ! ");
-    }
+}     
 
 
 
 
-
-    
-
-}
+     
