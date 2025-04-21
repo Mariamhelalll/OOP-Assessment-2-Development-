@@ -7,12 +7,12 @@ using System.Runtime.Runtime.Serialization.Formatters.Binary;
 
 namespace DungeonExplorer
 {
-   // Interface (ICollectible) for items
+    // Interface (ICollectible) for items
 
-   public interface ICollectible
-   {
-    void Use();
-   } 
+    public interface ICollectible
+    {
+      void Use();
+    } 
 
    // Interface (IDamageable) for accepting damage
 
@@ -25,16 +25,16 @@ namespace DungeonExplorer
    public class abstract Creature : IDamageable
    {
      // Main common properties
-     public string name {get;protected set;} // Any part of the code could read the name , but only this class and its subclasses could assign them.
+     public string name {get;protected set;} // (E) Any part of the code could read the name , but only this class and its subclasses could assign them.
      protected int health; // (E) (Protected) => visible to the Creature class and its subclasses , but hidden from any irrelevant classes (Ensuring Encapsulation).
-     public int Health => health; // LINQ expression * (Read-only property)
-     public bool ALive => health > 0; // LINQ expression * (Read-only property) , returns true (if health is more than zero).
+     public int Health => health; //  (Read-only property)
+     public bool ALive => health > 0; //  (Read-only property) , returns true (if health is more than zero).
 
      // Constructor (Protected) => Can not be initialized , but subclasses could call it via base(...)
      protected Creature (string name, int health) 
      {
        // Error handling for name entry
-       Debug.Assert(!string.IsNullOrWhiteSpace(name), "Creature name can not be left empty of null! ");
+       Debug.Assert(!string.IsNullOrWhiteSpace(name), "Creature name can not be left empty of null! "); // Ensures "name" is never empty or null.
        Debug.Assert(health > 0 , "Health needs to be positive! "); // Ensures health is always positive.
        Name = name;
        this.health = health; // *initializes the internal "health" field to the passed-in value
@@ -48,18 +48,112 @@ namespace DungeonExplorer
 
      // Dynamic polymorphism for different attack behaviours for different monsters
      public abstract void Attack (Player player); // Every concrete subclass MUST implement.
-   }
+    }
 
    // Player class 
    public class Player : Creature
    {
-      public Inventory Inventory {get; } = new Inventory();
-      public int Score {get; private set; }
-      public int Level {get; private set; }
+      public Inventory Inventory {get; } = new Inventory(); // (E*) Read only property (Inventory) + internal initialiser creates a new Inventory when a new player is constructed.
+      public int totalScore {get; private set; } // (E*) Holds player's total points , only methods inside the "Player" class can change it.
+      public int Level {get; private set; } // (E*) tracks progression level of player + External alterantion (outside the player class) is NOT possible.
 
       // Static polymorphism (Overloaded constructers)
+      public Player() :this ("player" , 100 ,1 ) {} // Paramater-less contsructor , ensuring the default assignment of the three- argument constructor 
+      // Constructor (in addtion to the assignment of the base properties).
+      public Player (string name, int health, int level): base (name, health)
+      {
+        Debug.Assert( level > 0 , "Level value must be 1 or more! "); // Error handling (Ensures level value is never neagtive.)
+        Level = level;
+      }
+
+      // GainScore method ("void" to allow it to be overriden if needed)
+
+      public void GainScore (int result)
+      {
+        Debug.Assert( result >= 0 , "Resulted points can not be neagtive! "); // Ensures that the total score is never a negative value.
+
+        Score += result;
+        if (Score >= Level *100) // A mechanism used to ensure enough result pints are declared in oreder to move to the next level (current level * 100).
+        {
+          Level++;
+          Console.WriteLine($"Next level : {Level} is approached !");
+
+        }
+      }
+
+      // Attack method (overriden from the base class and replaces the abstract method declaration in the base clase "Creature").
+      public overrirde void Attack (Player player)
+      {
+
+      }
       
-   }
+    }
+
+    public abstract class Monster : Creature
+    {
+      protected int power;
+      protected static readonly Random rng = new Random ();
+      
+      // Constructer
+      protected Monster (string name, int health, int power ) :base (name, health)
+      {
+        Debug.Assert( power > 0 , "Power value can not be negative !");
+        this.power= power;
+
+
+      }
+
+      // Attack method from base class "creature"
+      public override void Attack (Player player)
+      {
+        Debug.Assert(player !=null , "Player must not be empty or null !");
+        // "Flee of monster" condition
+        if (health < 0.2 *power) // Monster flees if health is below 20% of its power
+        {
+          Console.WriteLine($"Monster : "{Name}" flees! ");
+        }
+
+        else
+        {
+          Strike(player);
+        }
+      }
+
+      public virtual void Strike (IDamageable target)
+      {
+        Debug.Assert(target != null , "Strike target can not be null or empty !");
+        target.TakeDamage(power);
+        Console.WriteLine ($"{Name} hits for {power} damage! "); //*
+
+
+
+      }
+
+      public int Power => power; //Constructor ???
+    }
+
+    public class Snake : Monster
+    {
+      public Snake (): base ("Snake" , 30 , 5) {}
+      public overrirde void Strike (IDamageable target)
+      {
+        base.Strike(target); // Extra trait
+      }
+    }
+
+    public class Bat : Monster
+    {
+      public Bat (): base ("Bat", 100 ,25 ) {}
+      public override void Attack (IDamageable target)
+      {
+        base.Strike(target); // Extra trait
+      }
+      
+    }
+
+    
+
+
 
 
 }     
