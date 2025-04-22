@@ -134,21 +134,88 @@ namespace DungeonExplorer
 
     public class Snake : Monster
     {
-      public Snake (): base ("Snake" , 30 , 5) {}
+      public Snake (): base ("Snake" , 30 , 5) {} // Static polymorphism
       public overrirde void Strike (IDamageable target)
       {
-        base.Strike(target); // Extra trait
+        base.Strike(target); // Extra feature
       }
     }
 
     public class Bat : Monster
     {
-      public Bat (): base ("Bat", 100 ,25 ) {}
+      public Bat (): base ("Bat", 100 ,25 ) {} // Static polymorphism
       public override void Attack (IDamageable target)
       {
-        base.Strike(target); // Extra trait
+        base.Strike(target); // Extra feature
       }
       
+    }
+
+    public class Inventory
+    {
+
+      private readonly List<Item> items = new List<Item> (); // Dynamic array + supports LINQ + (E*) + "readonly" prevents field from being reassigned
+
+      public void addItem (Item item)
+      {
+
+        Debug.Assert (item != null ," Null item CAN NOT be added to inventory! "); // Error handling
+        items.Add(item); //stores item in the list
+      }
+
+      public bool removeItem (Item item) // bool is used as a data type as the function returns true if the item is successfully removed.
+      {
+        Debug.Assert(item != null ,"Null item CAN NOT be removed from inventory! "); // Error handling
+        return items.removeItem(item); // removes item and returns (true / false).
+
+      }
+
+      // LINQ filter
+      public IEnumerable<T> Filter <T>() where T : Item => items.ofType<T>(); // "Generic" + returns only items of the same type of T (T= Item).
+
+      // To find the strongest weapon using LINQ
+      public Weapon StongestWeapon()
+      {
+        var weapon = items.ofType<Weapon>() // 1) Filters weapon instances
+                           .OrderByDescendingly(w => w.Damage) // 2) sorts by "Damage" in a descending order
+                           .FirstOrDefault(); //Selects the first in the order to be the strongest. 
+
+        Debug.Assert(weapon != null , "No weapons present in inventory! "); // Error handling
+        return weapon;                   
+      }
+
+      public void NameSort() // Method to alphabetically sort the inventory
+      {
+        items.Sort((a,b) => string.Compare(a.Name , b.Name, StringComparison.Ordinal)); // Lambda Comparer orders items by their "Name", allowing the player to view the items in a logical order.
+
+      }
+
+
+    }
+
+    //GameMap class
+
+    public class GameMap
+    {
+      public List <Room> Rooms {get;} = new List <Room>();
+      public Room Current {get; private set;}
+      private static readonly Randon rng = new Random();
+
+      public GameMap
+      {
+        // 7 rooms 
+        for (int i =1 ; i<=7 ; i++)
+        {
+          Rooms.Add(new Room ($"Room {i}"));
+
+        }
+
+        //connections
+        for (int i = 0; i<6 ; i++)
+        {
+          Rooms[i].Neigh
+        }
+      }
     }
 
     
