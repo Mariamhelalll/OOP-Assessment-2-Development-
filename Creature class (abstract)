@@ -197,26 +197,80 @@ namespace DungeonExplorer
 
     public class GameMap
     {
-      public List <Room> Rooms {get;} = new List <Room>();
+      public List <Room> Rooms {get;} = new List <Room>();//(E*) + read-only + initialisation
       public Room Current {get; private set;}
-      private static readonly Randon rng = new Random();
+      private static readonly Randon rng = new Random(); // Can only be changed in this class + can be read other classes
 
       public GameMap
       {
         // 7 rooms 
         for (int i =1 ; i<=7 ; i++)
         {
-          Rooms.Add(new Room ($"Room {i}"));
+          Rooms.Add(new Room ($"Room {i}")); // Loops from rooms 1 to 7 
 
         }
 
         //connections
-        for (int i = 0; i<6 ; i++)
+        for (int i = 0; i<6 ; i++) // iterates through the first six rooms and links them together usinf "right" and "left logic.
         {
-          Rooms[i].Neigh
+          Rooms[i].Adjacent["Right"] =Rooms[i+1];// the current room's "Right"  is the next room
+          Rooms[i].Adjacent["Left"] = Rooms [i]; // The next room's "Left" is the current room
         }
+
+        Rooms[4].Trap = true; // challenge in room 4
+
+        // Random population of monsters into the rooms
+        foreach(var room in Rooms) //iteration over every room in the game
+        {
+          if ( rng.NextDouble() < 0.5) // 50%  (probability between empty and overcrowded rooms) // Check for monsters // Controls difficulty
+          {
+            room.Monsters.Add(
+                 rng.Next(2) == 0; // returns either 0 or 1  
+                 ? (Monster) new Bat()
+                 : new Snake()
+            );
+
+
+          }
+
+          if (rng.NextDouble() < 0.3) // Check for items (30% probability) (controls difficulty)
+          {
+            room.Items.Add(
+                 rng.Next(2) == 0
+                 ? (Item) new Weapon ("Sword",10);
+                 : new Potion ("E", 20);
+            );     
+          }
+
+        }
+
+        // starting room setting , making sure that at least on room exists.
+        Current = Rooms.FirstorDefault();
+        Debug.Assert(Current != null ,"At least one room should be there in the map! "); // Error handling
+
+
+      }
+
+      public void Move (string command)
+      {
+        Debug.Assert(command != null, "Command CAN NOT be null or empty! "); // Error handling
+
+        if (!Current.Adjacent.TryGetValue(command, out var next)) // Attempt to find an adjacent room in the chosen direction determined by the command.
+        {
+          throw new InvalidOperationException("This way is in valid! ");
+        } 
+
+        Current = next; // goes to the new room
+        if (Current.Trap)
+        {
+          // Trap logic may be added here
+          Console.WriteLine("A trap is found , (You lose 10 health points!)");
+        }
+
       }
     }
+
+    
 
     
 
