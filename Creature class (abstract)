@@ -11,14 +11,17 @@ namespace DungeonExplorer
 
     public interface ICollectible
     {
-      void Use();
+      string Name {get;}
+      void Collect(Player player); //*
     } 
 
    // Interface (IDamageable) for accepting damage
 
    public interface IDamageable
     {
-     void TakeDamage(int damage)
+      int Health{get;}
+      bool Alive {get;}
+      void TakeDamage(int damage);
 
     } 
 
@@ -293,7 +296,87 @@ namespace DungeonExplorer
     {
       public static void Save(GameMap map, Player player, string path)
       {
-        Debug.Assert
+        Debug.Assert(map != null , "To be saved : (Game map) CAN NOT be null !");
+        Debug.Assert(player != null , "To be saved: (player) CAN NOT be null !");
+        Debug.Assert(!string.IsNullOrWhiteSpace(path), "To be saved: (path) CAN NOT be empty! ");
+
+        try
+        {
+          using var fs = new FileStream(path, FileMode.Create);
+          new BinaryFormatter().Serialze(fs,Tuple.Create(map, player));
+        }
+
+        catch (Exception ex)
+        {
+          Console.WriteLine($"Saving process is unsuccessful :{ex.Message}");
+
+        }
+      }
+    }
+
+    public static (GameMap ,Player) Load (string path)
+    {
+      Debug.Assert(!string.IsNullOrWhiteSpace(path), "Path:(Load) CAN NOT be empty! ");
+
+      try
+      {
+        using var fs = new FileStream(path ,FileMode.Open);
+        var tup =(Tuple<GameMap ,Player>) new BinaryFormatter().Deserialize(fs);
+        return (tup.Item1 , tup.Item2);
+
+      }
+
+      catch (Exception ex)
+      {
+        Console.WriteLin($"Loading process id unsuccessful ! :{ex.Message}");
+        return(null , null);
+      }
+    }
+
+    //Items class
+    // Abstract class inheriting from the ICollectible interface
+    public abstract class Item :ICollectible
+    {
+      public string Name{get; protected set;}
+      public abstract void Collect(Player player);
+
+    }
+
+    public class Weapon : Item
+    {
+      public int Damage {get;}
+      //Constructor
+      public Weapon (string name, int damage)
+      {
+        Debug.Assert(!string.IsNullOrWhiteSpace(name),"Weapon name CAN NOT be empty! ");
+        Debug.Assert( damage > 0, "Weapon damage value MUST be POSITIVE!");
+        Name = name;
+        Damage = damage;
+      }
+
+      public overrirde void Collect(Player player)
+      {
+        Debug.Assert(player != null ,"Player in the game CAN NOT be null !");
+        player.Inventory.Add(this);
+      }
+    }
+
+    public class Potion : Item
+    {
+      public int Heal {get;}
+      //Constructor
+      public Potion(string name , int healValue)
+      {
+        Debug.Assert(!string .IsNullOrWhiteSpace (name),"Name CAN NOT be empty!");
+        Debug.Assert(healValue != null , "Value of healing CAN NOT be null!");
+        Name = name;
+        Heal = healValue;
+
+      }
+      public overrirde void Collect(Player player)
+      {
+        Debug.Assert(player != null ,"Player in the game CAN NOT be null !");
+        player.Inventory.Add(this);
       }
     }
 
