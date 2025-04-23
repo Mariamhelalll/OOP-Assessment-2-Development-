@@ -269,8 +269,35 @@ namespace DungeonExplorer
 
       }
     }
-
     
+    //Room class (Why is it used ?)
+    public class Room
+    {
+      public string Description {get;}
+      public bool Trap {get; set;}
+      public List <Monster> Monsters {get;}= new List <Monster>();
+      public List <Item> Items {get; } = new List<Item>();
+      public Dictionary <string , Room> Adjacent { get; } = new Dictionary<string,Room>();
+      
+      //Construtor
+      public Room (string description)
+      {
+        Debug.Assert(!string.IsNullOrWhiteSpace(description),"Room description CAN NOT be null or empty!");
+        Description = description;
+      }
+      
+    }
+
+    // Binary serialisation persistance
+    public static class ManageSaveLoad // Static: (because we don't instantiate this class , instead it groups related functions)
+    {
+      public static void Save(GameMap map, Player player, string path)
+      {
+        Debug.Assert
+      }
+    }
+
+
 
     
 
