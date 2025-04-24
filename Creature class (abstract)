@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using DungeonExplorer;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -26,8 +25,8 @@ namespace DungeonExplorer
 
    public interface IDamageable
     {
-      int Health{get;}
-      bool IsAlive {get;}
+      int Health{get; }
+      bool _Alive {get; }
       void Damage(int damage);
 
     } 
@@ -35,25 +34,26 @@ namespace DungeonExplorer
    public class abstract Creature : IDamageable
    {
      // Main common properties
-     public string Name {get;} // (E) Any part of the code could read the name , but only this class and its subclasses could assign them.
+     protected int HealthPoints;
+     public string Name {get; } // (E) Any part of the code could read the name , but only this class and its subclasses could assign them.
      protected int _health; // (E) (Protected) => visible to the Creature class and its subclasses , but hidden from any irrelevant classes (Ensuring Encapsulation).
-     public int Health => _health; //  (Read-only property)
-     public bool ALive => health > 0; //  (Read-only property) , returns true (if health is more than zero).
+     public int Health => HealthPoints; //  (Read-only property)
+     public bool _ALive => HealthPoints > 0; //  (Read-only property) , returns true (if health is more than zero).
 
      // Constructor (Protected) => Can not be initialized , but subclasses could call it via base(...)
-     protected Creature (string name, int health) 
+     protected Creature (string name, int startingHealth) 
      {
        // Error handling for name entry
-       if(!string.IsNullOrWhiteSpace(name))// Ensures "name" is never empty or null.
+       if(!string.IsNullOrWhiteSpace(name))
        {
         throw new ArgumentException("Name is required:" , nameof (name));
        }
-       if (startingHealth <= 0)  // Ensures health is always positive.
+       if (startingHealth <= 0) 
        {
         throw new ArgumentOutOfRangeException(nameof (startingHealth), "Health MUST be positive!");
        }
        Name = name;
-       _health = startingHealth ; // *initializes the internal "health" field to the passed-in value
+       HealthPoints = startingHealth ; // *initializes the internal "health" field to the passed-in value
      }
 
      public virtual void Damage (int value) // Virtual => allows subclasses to override this method if they need special "damage" logic.
@@ -63,7 +63,7 @@ namespace DungeonExplorer
         throw new ArgumentOutOfRangeException(nameof (value), "Damge value MUST be positive!");
       }
 
-      health = Math.Max(0, health - value); // Ensures that no negative points are used.
+      HealthPoints = Math.Max(0, HealthPoints - value); // Ensures that no negative points are used.
      }
 
      // Dynamic polymorphism for different attack behaviours for different monsters
@@ -73,53 +73,88 @@ namespace DungeonExplorer
    // Player class 
    public class Player : Creature
    {
-      private readonly List<ICollectible> _inventory= new();
+      private readonly List<ICollectible> inventory= new();
 
-      public CollectionReadOnly<ICollectible> Inventory => _inventory.AsReadOnly();
+      public CollectionReadOnly<ICollectible> Inventory => inventory;
 
       public int totalScore {get; private set; } // (E*) Holds player's total points , only methods inside the "Player" class can change it.
 
       public int Level {get; private set; } // (E*) tracks progression level of player + External alterantion (outside the player class) is NOT possible.
+
+      int MaximumHealth {get; }
 
       // Static polymorphism (Overloaded constructers)
       public Player(string name = "Gamer" , int health = 100 , int initialLevel = 1) :base(name, health)
       {
         if (initialLevel < 1)
         {
-          throw new ArgumentOutOfRangeException(nameof (initialLevel) , "Level MUST ")
+          throw new ArgumentOutOfRangeException(nameof (initialLevel) , "Level MUST be 1 or more! ");
+          Level =  initialLevel;
+          MaximumHealth = health;
         }
 
       }
-       // Paramater-less contsructor , ensuring the default assignment of the three- argument constructor 
-      // Constructor (in addtion to the assignment of the base properties).
-      public Player (string name, int health, int level): base (name, health)
-      {
-        Debug.Assert( level > 0 , "Level value must be 1 or more! "); // Error handling (Ensures level value is never neagtive.)
-        Level = level;
-      }
+       
 
       // GainScore method ("void" to allow it to be overriden if needed)
 
       public void GainScore (int result)
       {
-        Debug.Assert( result >= 0 , "Resulted points can not be neagtive! "); // Ensures that the total score is never a negative value.
-
+        if( result >= 0) 
+        {
+          throw new ArgumentOutOfRangeException(nameof (result) , "Result value MUST be positive!");
+        }
         Score += result;
-        if (Score >= Level *100) // A mechanism used to ensure enough result pints are declared in oreder to move to the next level (current level * 100).
+        while (Score >= Level *100) // A mechanism used to ensure enough result pints are declared in oreder to move to the next level (current level * 100).
         {
           Level++;
-          Console.WriteLine($"Next level : {Level} is approached !");
+          Console.WriteLine($"Next level : {Level} is achieved !");
 
         }
       }
 
       // Attack method (overriden from the base class and replaces the abstract method declaration in the base clase "Creature").
-      public overrirde void Attack (Player player)
+      public overrirde void Attack (IDamageable target)
       {
+        if(target == null)
+        {
+          throw new ArgumentNullException(nameof (target));
+        }
+
+        int damage = Level * 5 ;
+        target.Damage(damage);
+        Console.WriteLine($"{Name} has a {damage} attack !" );
+
 
       }
+
+      public void Heal (int heal)
+      {
+        if (heal < 0)
+        {
+          throw new ArgumentOutOfRangeException(nameof (heal) "Heal value MUST be positive! ");
+
+        }
+        int past= HealthPoints;
+        HealthPoints = Math.Min(MaximumHealth ,HealthPoints + heal);
+        Console.WriteLine($"{Name} has healed {HealthPoints - past} points ! Current health: {HealthPoints}/{MaximumHealth} . ");
+
+      }
+
+      public void InventoryAdd(ICollectible item)
+      {
+        if (item == null)
+        {
+          throw new ArgumentNullException(nameof (item));
+
+        }
+        inventory.Add(item);
+      }
+
+      public bool InventoryRemove (ICollectible item) => item != null && inventory.Remove(item);
       
     }
+    //Debugging 24/4 end.
 
     public abstract class Monster : Creature
     {
