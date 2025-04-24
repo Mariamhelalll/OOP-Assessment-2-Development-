@@ -1,12 +1,19 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using DungeonExplorer;
-using System.Runtime.Runtime.Serialization.Formatters.Binary;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace DungeonExplorer
 {
+
+
+  public static class ProvideRandom
+  {
+    public static Random Instance {get; } = new Random(); // Initialization
+  }
     // Interface (ICollectible) for items
 
     public interface ICollectible
@@ -20,48 +27,70 @@ namespace DungeonExplorer
    public interface IDamageable
     {
       int Health{get;}
-      bool Alive {get;}
-      void TakeDamage(int damage);
+      bool IsAlive {get;}
+      void Damage(int damage);
 
     } 
 
    public class abstract Creature : IDamageable
    {
      // Main common properties
-     public string name {get;protected set;} // (E) Any part of the code could read the name , but only this class and its subclasses could assign them.
-     protected int health; // (E) (Protected) => visible to the Creature class and its subclasses , but hidden from any irrelevant classes (Ensuring Encapsulation).
-     public int Health => health; //  (Read-only property)
+     public string Name {get;} // (E) Any part of the code could read the name , but only this class and its subclasses could assign them.
+     protected int _health; // (E) (Protected) => visible to the Creature class and its subclasses , but hidden from any irrelevant classes (Ensuring Encapsulation).
+     public int Health => _health; //  (Read-only property)
      public bool ALive => health > 0; //  (Read-only property) , returns true (if health is more than zero).
 
      // Constructor (Protected) => Can not be initialized , but subclasses could call it via base(...)
      protected Creature (string name, int health) 
      {
        // Error handling for name entry
-       Debug.Assert(!string.IsNullOrWhiteSpace(name), "Creature name can not be left empty of null! "); // Ensures "name" is never empty or null.
-       Debug.Assert(health > 0 , "Health needs to be positive! "); // Ensures health is always positive.
+       if(!string.IsNullOrWhiteSpace(name))// Ensures "name" is never empty or null.
+       {
+        throw new ArgumentException("Name is required:" , nameof (name));
+       }
+       if (startingHealth <= 0)  // Ensures health is always positive.
+       {
+        throw new ArgumentOutOfRangeException(nameof (startingHealth), "Health MUST be positive!");
+       }
        Name = name;
-       this.health = health; // *initializes the internal "health" field to the passed-in value
+       _health = startingHealth ; // *initializes the internal "health" field to the passed-in value
      }
 
      public virtual void Damage (int value) // Virtual => allows subclasses to override this method if they need special "damage" logic.
      {
-      Debug.Assert(value >= 0 , "Damage value needs to be positive! "); // Ensure damage value is always positive.
+      if(value < 0) // Ensure damage value is always positive.
+      {
+        throw new ArgumentOutOfRangeException(nameof (value), "Damge value MUST be positive!");
+      }
+
       health = Math.Max(0, health - value); // Ensures that no negative points are used.
      }
 
      // Dynamic polymorphism for different attack behaviours for different monsters
-     public abstract void Attack (Player player); // Every concrete subclass MUST implement.
+     public abstract void Attack (IDamageable target); // Every concrete subclass MUST implement.
     }
 
    // Player class 
    public class Player : Creature
    {
-      public Inventory Inventory {get; } = new Inventory(); // (E*) Read only property (Inventory) + internal initialiser creates a new Inventory when a new player is constructed.
+      private readonly List<ICollectible> _inventory= new();
+
+      public CollectionReadOnly<ICollectible> Inventory => _inventory.AsReadOnly();
+
       public int totalScore {get; private set; } // (E*) Holds player's total points , only methods inside the "Player" class can change it.
+
       public int Level {get; private set; } // (E*) tracks progression level of player + External alterantion (outside the player class) is NOT possible.
 
       // Static polymorphism (Overloaded constructers)
-      public Player() :this ("player" , 100 ,1 ) {} // Paramater-less contsructor , ensuring the default assignment of the three- argument constructor 
+      public Player(string name = "Gamer" , int health = 100 , int initialLevel = 1) :base(name, health)
+      {
+        if (initialLevel < 1)
+        {
+          throw new ArgumentOutOfRangeException(nameof (initialLevel) , "Level MUST ")
+        }
+
+      }
+       // Paramater-less contsructor , ensuring the default assignment of the three- argument constructor 
       // Constructor (in addtion to the assignment of the base properties).
       public Player (string name, int health, int level): base (name, health)
       {
