@@ -273,7 +273,7 @@ namespace DungeonExplorer
     //------------------------------------------------------------------------------
     public class GameMap
     {
-        public IRead# ReadOnlyList<Room> Rooms { get; }
+        public IReadOnlyList<Room> Rooms { get; }
         public Room Current { get; private set; }
 
         internal GameMap(List<Room> rooms)
