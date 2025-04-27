@@ -81,7 +81,7 @@ namespace DungeonExplorer
 
     public int Level {get; private set; } // (E*) tracks progression level of player + External alterantion (outside the player class) is NOT possible.
 
-    int MaximumHealth {get; }
+     public int MaximumHealth {get; }
 
     // Static polymorphism (Overloaded constructers)
     public Player(string name = "Gamer" , int health = 100 , int initialLevel = 1) :base(name, health)
@@ -94,13 +94,15 @@ namespace DungeonExplorer
       }
 
     }
+
+    
        
 
     // GainScore method ("void" to allow it to be overriden if needed)
 
     public void GainScore (int result)
     {
-      if( result >= 0) 
+      if( result <= 0) 
       {
         throw new ArgumentOutOfRangeException(nameof (result) , "Result value MUST be positive!");
       }
@@ -113,7 +115,7 @@ namespace DungeonExplorer
       }
     }
 
-    // Attack method (overriden from the base class and replaces the abstract method declaration in the base clase "Creature").
+    // Attack method (overriden from the base class and replaces the abstract method declaration in the base clase "Creature"). + Uses strongest weapon automatically.
     public overrirde void Attack (IDamageable target)
     {
       if(target == null)
@@ -121,10 +123,20 @@ namespace DungeonExplorer
         throw new ArgumentNullException(nameof (target));
       }
 
-      int damage = Level * 5 ;
-      target.Damage(damage);
-      Console.WriteLine($"{Name} has a {damage} attack !" );
+      try
+      {
+        var weapon = inventory.ofType<Weapon>().OrderByDescending(w => w.Damage).First(); //*
+        Console.WriteLine($"{Name} is using {weapon.Name} with a value of {weapon.Damage} damage !"); //*
+        target.Damage(weapon.Damage);//*
+      }
 
+      catch(InvalidOperationException)
+      {
+        int dmg = Level *5 ;
+        Console.WriteLine($"{Name} attacks with a damage value of {dmg}");
+        target.Damage(dmg);
+      }
+ 
 
     }
 
@@ -154,6 +166,7 @@ namespace DungeonExplorer
     public bool InventoryRemove (ICollectible item) => item != null && inventory.Remove(item);
       
   }
+
     
   // Monster class
   public abstract class Monster : Creature
@@ -163,9 +176,9 @@ namespace DungeonExplorer
     // Constructer
     protected Monster (string name, int health, int power ) :base (name, health)
     {
-      if ( Power <= 0) 
+      if ( power <= 0) 
       {
-        throw new ArgumentOutOfRangeException (nameof(Power) ,"Power value MUST be positive !");
+        throw new ArgumentOutOfRangeException (nameof(power) ,"Power value MUST be positive !");
         Power = power;
 
       }
@@ -181,7 +194,7 @@ namespace DungeonExplorer
       {
         throw new ArgumentNullException(nameof (target));
       }
-      if (HealthPoints < 0.3 * Power) //30%
+      if (HealthPoints < 0.3 * Power) //30% (special condition for fleeing)
       {
         Console.WriteLine($"{Name} flees !");
       }
@@ -202,16 +215,48 @@ namespace DungeonExplorer
   }
 
   // Snake Monster
-  public class Snake : Monster
+  public class Snake: Monster
   {
     public Snake() : base(" Snake ",30,5 ) { }
+    public override void Attack (IDamageable target)
+    {
+      Console.WriteLine ("Snake strikes with venomous cuspid !");
+      base.Attack(target);
+    }
   }
 
   //Bat Monster
   public class Bat : Monster
   {
     public Bat() : base(" Bat ", 100 ,25) { }
+    protected overrirde void strike(IDamageable target)
+    {
+      Console.WriteLine("Bat cries out and dives in!");
+      base.Strike(target);
+    }
   } 
+
+  // Goblin Monster
+  public class Goblin : Monster
+  {
+    public Bat() :base("Goblin" , 60,40) {}
+    public overrirde void Attack (IDamageable target)
+    {
+      Console.WriteLine("Goblin is attacking sneakly! ");
+      base.Attack(target);
+    }
+  }
+
+  // Troll Monster
+  public class Troll : Monster
+  {
+    public Troll (): base ("Troll", 200, 60) {}
+    public override void Strike (IDamageable target)
+    {
+      Console.WriteLine ("Troll's heavy blow smashes everything !");
+      base.Strike(target);
+    }
+  }
 
   //Items class
   public abstract class Item : ICollectible
@@ -253,7 +298,7 @@ namespace DungeonExplorer
   // Potion subclass
   public class Potion : Item
   {
-    public int AmountOfHeal {get; }
+    public int AmountOfHealing {get; }
     public Potion (string name , int quantity) : base(name)
     {
       if (quantity <= 0)
@@ -261,16 +306,189 @@ namespace DungeonExplorer
         throw new ArgumentOutOfRangeException(nameof(quantity), nameof(quantity));
 
       }
-      AmountOfHeal = quantity;
+      AmountOfHealing = quantity;
     }
 
     public overrirde void Collect (Player player)
     {
       player.InventoryAdd(this);
-      Console.WriteLine($"{player.Name} has picked up a potion named {Name} , with a healing value if : {AmountOfHeal} !");
+      Console.WriteLine($"{player.Name} has picked up a potion named {Name} , with a healing value if : {AmountOfHealing} !");
+    }
+
+  }
+
+  // Key Item
+  public class Key: Item
+  {
+    public Key (string name): base(name) {}
+    public override void Collect (Player player)
+    {
+      player.InventoryAdd(this);
+      Console.WriteLine($"{player.Name} has picked up the {Name} item! ");
+
+    }
+  }
+  
+  // Scroll Item
+  public class Scroll :Item
+  {
+    public string Context {get; }
+    public Scroll (string name, string context) :base(name)
+    {
+      Context = context;
+
+    }
+
+    public override void Collect(Player player)
+    {
+      player.InventoryAdd(this);
+      Console.WriteLine($"{player.Name} has picked up the {Name} item with the context of :{Context}");
     }
   }
   //Debugging 7:35 26/4
+
+  //Room and GameMap
+  public class Room
+  {
+    public string Description {get; }
+    public bool ContainsTrap {get; set;}
+    public bool ContainsPuzzle {get; set;}
+    public string QuestionInPuzzle {get; set;}
+    public string AnswerOfPuzzle {get; set;}
+    public List<Monster> Monsters {get; }= new();
+    public List<Item> Items  {get; } = new();
+    public Dictionary<string,Room> Adjacent {get; } =new ();
+
+    public Room (string description)
+    {
+      if (string.IsNullOrWhiteSpace(description))
+      {
+        throw new ArgumentException(nameof(description), "Description of room is required!");
+
+      }
+      Description= description;
+    }
+  }
+
+  //GameMap  (mechanism)
+  public static class GameMapMechanism
+  {
+
+    public static GameMap CreateDefault (int totalRooms= 7)
+    {
+      var rng = ProvideRandom.Instance;
+      var rooms = Enumerable.Range(1 , totalRooms)
+                            .Select(i => new Rooms ($"Room {i}"));
+                            ToList();
+      // Linking rooms mechanism
+      for (int i = 0 ; i < rooms.Count; i++)
+      {
+        if (i < rooms.Count - 1) rooms.Adjacent[ "Right"] = rooms[i + 1];
+        if (i > 0)
+        {
+          rooms[i].Adjacent["Left"] =  rooms[i-1];
+        }
+      }
+
+      // Various weapons and potions to be used in rooms
+      var weaponList= new List<weapon>
+      {
+        new Weapon("Sword" , rng.Next(6,20)),
+        new Weapon ("Axe", rng.Next (16, 30)),
+        new Weapon ("Dagger" , rng.Next(10,6)),
+        new Weapon ("Knife" , rng.Next(3,12))
+      };
+
+      var potionList =  new List<Potion>
+      {
+        new Potion ("Potion: Health" , rng.Next(15,40)),
+        new Potion ("Potion: Max" , rng.Next(19,30)),
+        new Potion ("Potion : Stamina" , rng.Next(16,50))
+      };
+
+      // Population of rooms with monters and items
+      foreach (var in room in rooms)
+      {
+        int monsterCount = rng.Next(0,4);
+        for (int n = 0; n < monsterCount; n++)
+        {
+          Monster m = rng.Next(4) switch
+          {
+            0 => new Snake();
+            1 => new Bat ();
+            2 => new Goblin ();
+            _ => new Troll ();
+          };
+          room.Monsters.Add(m);
+        }
+
+        int itemCount = rng.Next(0,4);
+        for (n = 0; n < itemCount ; n++)
+        {
+          Item i = rng.Next(4) switch
+          {
+            0 => weaponList[rng.Next(weaponList.Count)],
+            1 => potionList[rng.Next(potionList.Count)],
+            2 => new Key("Golden key");
+            _ => new Scroll("Magic Scroll" , "Ask help from a friend to enter!");
+          };
+          room.Items.Add(i);
+        }
+      }
+
+      // Special conditions in rooms
+      // "Trap" and "Puzzle" 
+      if (rooms.Count > 0) rooms[0].ContainsTrap =true;
+      if (rooms.Count > 1)
+      {
+        var presentRoom = rooms[1];
+        presentRoom.ContainsPuzzle = true;
+        presentRoom.QuestionInPuzzle = "What has hands but can not clap ?";
+        presentRoom.AnswerOfPuzzle= "A clock";
+      }
+
+      return new GameMap(rooms);
+                           
+    }
+  }
+
+  // GameMap class
+  public class GameMap
+  {
+    public ReadOnlyList<Room> Rooms{get; }
+    public Room Present {get; private set; }
+
+    internal GameMap (List<Room> rooms)
+    {
+      if (rooms == null || rooms.Count == 0)
+      {
+        throw new ArgumentException ("Rooms are required !", nameof(rooms));
+        Rooms = rooms;
+        Present = rooms[0];
+      }
+
+      public void Move (dtring direction, Player player)
+      {
+        if (!Present.Adjacent.TryGetValue(direction, out var next))
+        {
+          throw new InvalidOperationException ("This direction CAN NOT be proceeded with !");
+
+        }
+
+        Present =  next;
+        if (Present.HasTrap)
+        {
+          Console.WriteLine ("Oops ! You fell into the trap !");
+          Console.WriteLine ("You lose 10 points !");
+          player.Damage(10);
+          Present.ContainsTrap = false;
+        }
+      }
+    }
+  }
+
+  // Persistance via (serialization)
+  //2:46 27th of april.
 
 
     public class Inventory
