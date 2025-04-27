@@ -376,10 +376,22 @@ namespace DungeonExplorer
 
     public static GameMap CreateDefault (int totalRooms= 7)
     {
+
+      private static readonly List<string> _desccriptions = new List<string>
+      {
+        "A wet cave with glowing crystals",
+        "A messy school library with open books scattered everywhere",
+        "A massive hall with the torn walls",
+        "" //*
+      }
       var rng = ProvideRandom.Instance;
-      var rooms = Enumerable.Range(1 , totalRooms)
-                            .Select(i => new Rooms ($"Room {i}"));
-                            ToList();
+      var rooms = new List <Room>();
+      // rooms with descriptions
+      for (int i = 0; i < totalRooms ; i++)
+      {
+        string description = _desccriptions[rng.Next(_desccriptions.Count)];
+        rooms.Add(new Room (description));
+      }
       // Linking rooms mechanism
       for (int i = 0 ; i < rooms.Count; i++)
       {
@@ -489,6 +501,45 @@ namespace DungeonExplorer
 
   // Persistance via (serialization)
   //2:46 27th of april.
+  public static class ManageSaveLoad
+  {
+    private static readonly JsonOptions Opts = new JsonOptions
+    {
+      WriteIntended = true,
+      PreferenceHandler = ReferenceHandler.Preserve
+    };
+    private class State
+    {
+      public GameMap Map;
+      public Player player;
+    }
+
+    public static void Save (string route, GameMap map, Player player)
+    {
+      if (string.IsNullOrWhiteSpace(route)) 
+      {
+        throw new ArgumentException("Route is required!");
+
+      }
+      var s = new state {Map = map, Player = player};
+      File.WriteAllText(route , JsonSerializer.Serialze(s, Opts));
+    }
+
+    public static (GameMap , Player) Load(string route)
+    {
+      if (string.IsNullOrWhiteSpace(route))
+      {
+        throw new ArgumentException ("Route is required!");
+      }
+      var js = File.ReadAllText(route);
+      var st = JsonSerializer.Deserialize<State>(js,Opts) ?? throw new InvalidOperationException ("Deserialization is unsuccessful !");
+      return (st.Map , st.Player);
+
+    } // end _
+
+
+
+  }
 
 
     public class Inventory
