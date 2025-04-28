@@ -506,7 +506,7 @@ namespace DungeonExplorer
   //2:46 27th of april.
   public static class ManageSaveLoad
   {
-    private static readonly JsonOptions Opts = new JsonOptions
+    private static readonly JsonSerializerOptions Opts = new JsonSerializerOptions
     {
       WriteIntended = true,
       PreferenceHandler = ReferenceHandler.Preserve
@@ -524,8 +524,8 @@ namespace DungeonExplorer
         throw new ArgumentException("Route is required!");
 
       }
-      var s = new state {Map = map, Player = player};
-      File.WriteAllText(route , JsonSerializer.Serialze(s, Opts));
+      var s = new State {Map = map, Player = player};
+      File.WriteAllText(route , JsonSerializer.Serialize(s, Opts));
     }
 
     public static (GameMap , Player) Load(string route)
@@ -536,9 +536,9 @@ namespace DungeonExplorer
       }
       var js = File.ReadAllText(route);
       var st = JsonSerializer.Deserialize<State>(js,Opts) ?? throw new InvalidOperationException ("Deserialization is unsuccessful !");
-      return (st.Map , st.Player);
+      return (st.Map , st.player);
 
-    } // end _
+    } 
 
 
 
@@ -548,7 +548,7 @@ namespace DungeonExplorer
   public static class Program
   {
     private static string Position(GameMap map, Player player1) =>
-        $"Position: {map.Present.Description} / Health value: {player1.Health}/ {player1.MaximumHealth} / Total Score: {player1.Score} / Level: {player1.Level}";
+        $"Position: {map.Present.Description} / Health value: {player1.Health}/ {player1.MaximumHealth} / Total Score: {player1.totalScore} / Level: {player1.Level}";
 
     private static void Main()
     {
@@ -589,7 +589,7 @@ namespace DungeonExplorer
         Console.WriteLine("Order of Items grouped by type: ");
         map.Present.Items
             .GroupBy(i => i.GetType().Name)
-            .ToList();
+            .ToList()
             .ForEach (g => Console.WriteLine($" {g.Key} : {g.Count()}"));
 
         Console.Write("Choice: ");
@@ -602,7 +602,7 @@ namespace DungeonExplorer
           {
             case "move":
             {
-              map.Move(input.Length > 1 ?input[1] : throw new ArgumentException("Direction is required!",));
+              map.Move(input.Length > 1 ?input[1] : throw new ArgumentException("Direction is required!"));
               break;
 
             }
@@ -686,7 +686,7 @@ namespace DungeonExplorer
       if (!player.IsAlive)
       {
         Console.WriteLine("Unfortunately, you died!");
-        Comsole.WriteLine("Game Over");
+        Console.WriteLine("Game Over");
       }
     }    
 
