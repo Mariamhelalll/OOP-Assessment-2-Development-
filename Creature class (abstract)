@@ -541,6 +541,141 @@ namespace DungeonExplorer
 
   }
 
+  //Program class
+  public static class Program
+  {
+    private static string Position(GameMap map, Player player1) =>
+        $"Position: {map.Present.Description} / Health value: {player1.Health}/ {player1.MaximumHealth} / Total Score: {player1.Score} / Level: {player1.Level}";
+
+    private static void Main()
+    {
+      var map = GameMapMechanism.CreateDefault();
+      var player = new Player();
+
+      Console.WriteLine("Welcome to the new adventure in Dungeon Explorer! ");
+
+      while (player._ALive)
+      {
+        Console.WriteLine(Position(map,player));
+
+        if (map.Present.ContainsPuzzle)
+        {
+          Console.WriteLine("Here is the puzzle's question : " + map.Present.QuestionInPuzzle);
+          Console.Write("Answer:");
+          var ans = Console.ReadLine()?Trim().ToLower();
+          if (ans == map.Present.AnswerOfPuzzle)
+          {
+            Console.WriteLine("Well done ! Your answer to the puzzle was correct! ");
+            player.GainScore(50);
+            map.Present.ContainsPuzzle = false;
+          }
+
+          else
+          {
+            Console.WriteLine("Hard luck ! Your answer to the puzzle is incorrect!(Try again next time!)");
+            continue;
+          } 
+        }
+
+        Console.WriteLine("The order of monster's health sorted descendingly (by health) :");
+        map.Present.Monsters
+            .OrderByDescending(m => m.Health)
+            .ToList()
+            .ForEach(m => Console.WriteLine($"{m.Name} : ({m.Health} health points)"));
+
+        Console.WriteLine("Order of Items grouped by type: ");
+        map.Present.Items
+            .GroupBy(i => i.GetType().Name)
+            .ToList();
+            .ForEach (g => Console.WriteLine($" {g.Key} : {g.Count()}"));
+
+        Console.Write("Choice: ");
+        var input = Console.ReadLine()?.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (input == null || input.Length == 0) continue;
+
+        try
+        {
+          switch(input[0]. ToLower())
+          {
+            case "move":
+            {
+              map.Move(input.Length > 1 ?input[1] : throw new ArgumentException("Direction is required!",));
+              break;
+
+            }
+
+            case "attack":
+            {
+              var monster = map.Present.Monsters.FirstOrDefault() ?? throw new InvalidOperationException("No monsters are present here!");
+              player.Attack(monster);
+              if(!monster._ALive)
+              {
+                player.GainScore(monster.Health > 50 ? 50: 20 );
+                map.Present.Monsters.Remove(monster);
+                Console.WriteLine("Monster is defeated successfully!");
+              }
+              break;
+            }
+
+            case "pickup":
+            {
+              if(input.Length < 2) throw new ArgumentException("Item name is required!!");
+              var item =  map.Present.Items.FirstOrDefault(i => i.Name.Equals(input[1] , StringComparison.OrdinalIgnoreCase))
+                          ??  throw new InvalidOperationException ("Item name is not found!");
+              item.Collect(player);
+              map.Present.Items.Remove(item);
+              break;            
+
+            }
+
+            case "use item":
+            {
+              if (input.Length < 2) throw new ArgumentException(" Item name is required!");
+              var potion = player.Inventory.OfType<Potion>()
+                  .FirstOrDefault(p => p.Name.Equals(input[1] , StringComparison.OrdinalIgnoreCase))
+                         ?? throw new InvalidOperationException ("Potion is NOT in inventory!");
+              player.Heal(potion.HealAmount);
+              player.InventoryRemove(potion);
+              break;           
+            }
+
+            case "save":
+            {
+              ManageSaveLoad.Save("Save.json", map , player);
+              Console.WriteLine("Game is saved successfully !");
+              break;
+            }
+
+            case "load":
+            {
+              (map, player) = ManageSaveLoad.Load("Save.json");
+              Console.WriteLine("Game is loaded successfully");
+              break;
+            }
+            
+            case "exit":
+            {
+              Console.WriteLine("Game exited successfully!");
+              break;
+            }
+
+            default:
+            {
+              Console.WriteLine("Invalid input ! (Please try again!)");
+              break;
+            }
+            
+          }
+
+          if (player.totalScore >= 500)
+          {
+            // end
+          }
+        }        
+      }
+    }    
+  }
+
 
     public class Inventory
     {
