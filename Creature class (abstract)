@@ -31,20 +31,20 @@ namespace DungeonExplorer
 
   } 
 
-  public class abstract Creature : IDamageable
+  public abstract class Creature : IDamageable
   {
     // Main common properties
     protected int HealthPoints;
     public string Name {get; } // (E) Any part of the code could read the name , but only this class and its subclasses could assign them.
     protected int _health; // (E) (Protected) => visible to the Creature class and its subclasses , but hidden from any irrelevant classes (Ensuring Encapsulation).
     public int Health => HealthPoints; //  (Read-only property)
-    public bool _ALive => HealthPoints > 0; //  (Read-only property) , returns true (if health is more than zero).
+    public bool _Alive => HealthPoints > 0; //  (Read-only property) , returns true (if health is more than zero).
 
     // Constructor (Protected) => Can not be initialized , but subclasses could call it via base(...)
     protected Creature (string name, int startingHealth) 
     {
       // Error handling for name entry
-      if(!string.IsNullOrWhiteSpace(name))
+      if(string.IsNullOrWhiteSpace(name))
       {
         throw new ArgumentException("Name is required:" , nameof (name));
       }
@@ -52,6 +52,7 @@ namespace DungeonExplorer
       {
         throw new ArgumentOutOfRangeException(nameof (startingHealth), "Health MUST be positive!");
       }
+
       Name = name;
       HealthPoints = startingHealth ; // *initializes the internal "health" field to the passed-in value
     }
@@ -75,7 +76,7 @@ namespace DungeonExplorer
   {
     private readonly List<ICollectible> inventory= new();
 
-    public CollectionReadOnly<ICollectible> Inventory => inventory;
+    public IReadOnlyList<ICollectible> Inventory => inventory;
 
     public int totalScore {get; private set; } // (E*) Holds player's total points , only methods inside the "Player" class can change it.
 
@@ -89,9 +90,10 @@ namespace DungeonExplorer
       if (initialLevel < 1)
       {
         throw new ArgumentOutOfRangeException(nameof (initialLevel) , "Level MUST be 1 or more! ");
-        Level =  initialLevel;
-        MaximumHealth = health;
+        
       }
+      Level =  initialLevel;
+      MaximumHealth = health;
 
     }
 
@@ -106,8 +108,8 @@ namespace DungeonExplorer
       {
         throw new ArgumentOutOfRangeException(nameof (result) , "Result value MUST be positive!");
       }
-      Score += result;
-      while (Score >= Level *100) // A mechanism used to ensure enough result pints are declared in oreder to move to the next level (current level * 100).
+      totalScore += result;
+      while (totalScore >= Level *100) // A mechanism used to ensure enough result pints are declared in oreder to move to the next level (current level * 100).
       {
         Level++;
         Console.WriteLine($"Next level : {Level} is achieved !");
@@ -116,7 +118,7 @@ namespace DungeonExplorer
     }
 
     // Attack method (overriden from the base class and replaces the abstract method declaration in the base clase "Creature"). + Uses strongest weapon automatically.
-    public overrirde void Attack (IDamageable target)
+    public override void Attack (IDamageable target)
     {
       if(target == null)
       {
@@ -125,7 +127,7 @@ namespace DungeonExplorer
 
       try
       {
-        var weapon = inventory.ofType<Weapon>().OrderByDescending(w => w.Damage).First(); //*
+        var weapon = inventory.OfType<Weapon>().OrderByDescending(w => w.Damage).First(); //*
         Console.WriteLine($"{Name} is using {weapon.Name} with a value of {weapon.Damage} damage !"); //*
         target.Damage(weapon.Damage);//*
       }
@@ -179,9 +181,9 @@ namespace DungeonExplorer
       if ( power <= 0) 
       {
         throw new ArgumentOutOfRangeException (nameof(power) ,"Power value MUST be positive !");
-        Power = power;
-
+        
       }
+      Power = power;
     } 
 
 
@@ -229,7 +231,7 @@ namespace DungeonExplorer
   public class Bat : Monster
   {
     public Bat() : base(" Bat ", 100 ,25) { }
-    protected overrirde void strike(IDamageable target)
+    protected override void Strike(IDamageable target)
     {
       Console.WriteLine("Bat cries out and dives in!");
       base.Strike(target);
@@ -239,7 +241,7 @@ namespace DungeonExplorer
   // Goblin Monster
   public class Goblin : Monster
   {
-    public Bat() :base("Goblin" , 60,40) {}
+    public Goblin() :base("Goblin" , 60,40) {}
     public overrirde void Attack (IDamageable target)
     {
       Console.WriteLine("Goblin is attacking sneakly! ");
@@ -267,8 +269,8 @@ namespace DungeonExplorer
       if(string.IsNullOrWhiteSpace (name))
       {
         throw new ArgumentException(nameof(name), "Name is required !");
-        Name = name ;
       }
+      Name = name ;
     }
     public abstract void Collect (Player player);
   }  
@@ -276,18 +278,18 @@ namespace DungeonExplorer
   // Weapon subclass 
   public class Weapon : Item 
   {
-    public int Distruction {get; }
+    public int Destruction {get; }
     //Constructor
-    public Weapon (string name , int distruction): base(name)
+    public Weapon (string name , int destruction): base(name)
     {
-      if (distruction <=0 )
+      if (destruction <=0 )
       {
-        throw new ArgumentOutOfRangeException(nameof(distruction) , "Distruction value MUST be positive! ");
-        Distruction = distruction;
+        throw new ArgumentOutOfRangeException(nameof(destruction) , "Destruction value MUST be positive! ");
+        Destruction = destruction;
       }
     }
 
-    public overrirde void Collect (Player player)
+    public override void Collect (Player player)
     {
       player.InventoryAdd(this);
       Console.WriteLine($"{player.Name} has picked up {Name} with a damage value of: {Distruction} !");
@@ -312,7 +314,7 @@ namespace DungeonExplorer
     public overrirde void Collect (Player player)
     {
       player.InventoryAdd(this);
-      Console.WriteLine($"{player.Name} has picked up a potion named {Name} , with a healing value if : {AmountOfHealing} !");
+      Console.WriteLine($"{player.Name} has picked up a potion named {Name} , with a healing value if : {potion.AmountOfHealing} !");
     }
 
   }
@@ -346,7 +348,7 @@ namespace DungeonExplorer
     }
   }
   //Debugging 7:35 26/4
-
+  // error fixes 28th 10:32
   //Room and GameMap
   public class Room
   {
@@ -377,7 +379,7 @@ namespace DungeonExplorer
     public static GameMap CreateDefault (int totalRooms= 7)
     {
 
-      private static readonly List<string> _desccriptions = new List<string>
+      private static readonly List<string> _descriptions = new List<string>
       {
         "A wet cave with glowing crystals",
         "A messy school library with open books scattered everywhere",
@@ -389,13 +391,13 @@ namespace DungeonExplorer
       // rooms with descriptions
       for (int i = 0; i < totalRooms ; i++)
       {
-        string description = _desccriptions[rng.Next(_desccriptions.Count)];
+        string description = _descriptions[rng.Next(_descriptions.Count)];
         rooms.Add(new Room (description));
       }
       // Linking rooms mechanism
       for (int i = 0 ; i < rooms.Count; i++)
       {
-        if (i < rooms.Count - 1) rooms.Adjacent[ "Right"] = rooms[i + 1];
+        if (i < rooms.Count - 1) rooms[i].Adjacent[ "Right"] = rooms[i + 1];
         if (i > 0)
         {
           rooms[i].Adjacent["Left"] =  rooms[i-1];
@@ -403,11 +405,11 @@ namespace DungeonExplorer
       }
 
       // Various weapons and potions to be used in rooms
-      var weaponList= new List<weapon>
+      var weaponList= new List<Weapon>
       {
         new Weapon("Sword" , rng.Next(6,20)),
         new Weapon ("Axe", rng.Next (16, 30)),
-        new Weapon ("Dagger" , rng.Next(10,6)),
+        new Weapon ("Dagger" , rng.Next(6,10)),
         new Weapon ("Knife" , rng.Next(3,12))
       };
 
@@ -419,17 +421,17 @@ namespace DungeonExplorer
       };
 
       // Population of rooms with monters and items
-      foreach (var in room in rooms)
+      foreach (var  room in rooms)
       {
         int monsterCount = rng.Next(0,4);
         for (int n = 0; n < monsterCount; n++)
         {
           Monster m = rng.Next(4) switch
           {
-            0 => new Snake();
-            1 => new Bat ();
-            2 => new Goblin ();
-            _ => new Troll ();
+            0 => new Snake(),
+            1 => new Bat (),
+            2 => new Goblin (),
+            _ => new Troll (),
           };
           room.Monsters.Add(m);
         }
@@ -475,11 +477,12 @@ namespace DungeonExplorer
       if (rooms == null || rooms.Count == 0)
       {
         throw new ArgumentException ("Rooms are required !", nameof(rooms));
-        Rooms = rooms;
-        Present = rooms[0];
+        
       }
+      Rooms = rooms;
+      Present = rooms[0];
 
-      public void Move (dtring direction, Player player)
+      public void Move (string direction, Player player)
       {
         if (!Present.Adjacent.TryGetValue(direction, out var next))
         {
@@ -488,7 +491,7 @@ namespace DungeonExplorer
         }
 
         Present =  next;
-        if (Present.HasTrap)
+        if (Present.ContainsTrap)
         {
           Console.WriteLine ("Oops ! You fell into the trap !");
           Console.WriteLine ("You lose 10 points !");
@@ -498,7 +501,7 @@ namespace DungeonExplorer
       }
     }
   }
-
+ // End debugging 28th 10:42
   // Persistance via (serialization)
   //2:46 27th of april.
   public static class ManageSaveLoad
