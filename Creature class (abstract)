@@ -683,7 +683,7 @@ namespace DungeonExplorer
         }        
       }
 
-      if (!player.IsAlive)
+      if (!player._ALive)
       {
         Console.WriteLine("Unfortunately, you died!");
         Console.WriteLine("Game Over");
