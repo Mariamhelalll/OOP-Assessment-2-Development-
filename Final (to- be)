@@ -477,6 +477,10 @@ namespace DungeonExplorer
 
         public static void Main()
         {
+            //Automated tests before game start!
+            Console.WriteLine("Automated tests are running .");
+            Testing.RunAll();
+            
             var map = GameMapMechanism.CreateDefault();
             var player = new Player();
 
