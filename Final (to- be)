@@ -1,0 +1,608 @@
+using System;
+using System.Collections.Object.Model;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace DungeonExplorer
+{
+    public static class ProvideRandom
+    {
+        public static Random Instance { get; } = new Random();
+    }
+
+    public interface ICollectible
+    {
+        string Name { get; }
+        void Collect(Player player);
+    }
+
+    public interface IDamageable
+    {
+        int Health { get; }
+        bool _Alive { get; }
+        void Damage(int damage);
+    }
+
+    public abstract class Creature : IDamageable
+    {
+        protected int HealthPoints;
+        public string Name { get; }
+        public int Health => HealthPoints;
+        public bool _Alive => HealthPoints > 0;
+
+
+
+        protected Creature(string name, int startingHealth)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("Name is required:", nameof(name));
+            if (startingHealth <= 0)
+                throw new ArgumentOutOfRangeException(nameof(startingHealth), "Health MUST be positive!");
+
+            Name = name;
+            HealthPoints = startingHealth;
+        }
+
+        public virtual void Damage(int value)
+        {
+            if (value < 0)
+                throw new ArgumentOutOfRangeException(nameof(value), "Damage value MUST be positive!");
+            HealthPoints = Math.Max(0, HealthPoints - value);
+        }
+
+        public abstract void Attack(IDamageable target);
+
+
+    }
+
+    public class Player : Creature
+    {
+        private readonly List<ICollectible> inventory = new();
+        public IReadOnlyList<ICollectible> Inventory => inventory;
+        public int totalScore { get; private set; }
+        public int Level { get; private set; }
+        public int MaximumHealth { get; }
+
+        public Player(string name = "Gamer", int health = 100, int initialLevel = 1) : base(name, health)
+        {
+            if (initialLevel < 1)
+                throw new ArgumentOutOfRangeException(nameof(initialLevel), "Level MUST be 1 or more!");
+            Level = initialLevel;
+            MaximumHealth = health;
+        }
+
+        public void GainScore(int result)
+        {
+            if (result <= 0)
+                throw new ArgumentOutOfRangeException(nameof(result), "Result value MUST be positive!");
+
+            totalScore += result;
+            while (totalScore >= Level * 100)
+            {
+                Level++;
+                Console.WriteLine($"Next level: {Level} is achieved!");
+            }
+        }
+
+        public override void Attack(IDamageable target)
+        {
+            if (target == null)
+                throw new ArgumentNullException(nameof(target));
+
+            try
+            {
+                var weapon = inventory.OfType<Weapon>().OrderByDescending(w => w.Damage).First();
+                Console.WriteLine($"{Name} attacks with {weapon.Name} ({weapon.Damage} damage)!");
+                target.Damage(weapon.Damage);
+            }
+            catch (InvalidOperationException)
+            {
+                int dmg = Level * 5;
+                Console.WriteLine($"{Name} attacks with {dmg} base damage!");
+                target.Damage(dmg);
+            }
+        }
+
+        public void Heal(int heal)
+        {
+            if (heal < 0)
+                throw new ArgumentOutOfRangeException(nameof(heal), "Heal value MUST be positive!");
+
+            int previous = HealthPoints;
+            HealthPoints = Math.Min(MaximumHealth, HealthPoints + heal);
+            Console.WriteLine($"{Name} healed {HealthPoints - previous} points! ({HealthPoints}/{MaximumHealth})");
+        }
+
+        public void InventoryAdd(ICollectible item)
+        {
+            if (item == null)
+                throw new ArgumentNullException(nameof(item));
+            inventory.Add(item);
+        }
+
+        public bool InventoryRemove(ICollectible item) => item != null && inventory.Remove(item);
+    }
+
+    public abstract class Monster : Creature
+    {
+        protected int Power { get; }
+
+        protected Monster(string name, int health, int power) : base(name, health)
+        {
+            if (power <= 0)
+                throw new ArgumentOutOfRangeException(nameof(power), "Power MUST be positive!");
+            Power = power;
+        }
+
+        public override void Attack(IDamageable target)
+        {
+            if (target == null)
+                throw new ArgumentNullException(nameof(target));
+
+            if (HealthPoints < 0.3 * Power)
+            {
+                Console.WriteLine($"{Name} flees!");
+            }
+            else
+            {
+                Strike(target);
+            }
+        }
+
+        protected virtual void Strike(IDamageable target)
+        {
+            Console.WriteLine($"{Name} strikes with {Power} power!");
+            target.Damage(Power);
+        }
+    }
+
+    public class Snake : Monster
+    {
+        public Snake() : base("Snake", 30, 5) { }
+
+        public override void Attack(IDamageable target)
+        {
+            Console.WriteLine("Snake strikes with venomous fangs!");
+            base.Attack(target);
+        }
+    }
+
+    public class Bat : Monster
+    {
+        public Bat() : base("Bat", 100, 25) { }
+
+        protected override void Strike(IDamageable target)
+        {
+            Console.WriteLine("Bat screeches and attacks!");
+            base.Strike(target);
+        }
+    }
+
+    public class Goblin : Monster
+    {
+        public Goblin() : base("Goblin", 60, 40) { }
+
+        public override void Attack(IDamageable target)
+        {
+            Console.WriteLine("Goblin attacks sneakily!");
+            base.Attack(target);
+        }
+    }
+
+    public class Troll : Monster
+    {
+        public Troll() : base("Troll", 200, 60) { }
+
+        protected override void Strike(IDamageable target)
+        {
+            Console.WriteLine("Troll smashes heavily!");
+            base.Strike(target);
+        }
+    }
+
+    public abstract class Item : ICollectible
+    {
+        public string Name { get; }
+
+        protected Item(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("Name is required!", nameof(name));
+            Name = name;
+        }
+
+        public abstract void Collect(Player player);
+    }
+
+    public class Weapon : Item
+    {
+        public int Damage { get; }
+
+        public Weapon(string name, int damage) : base(name)
+        {
+            if (damage <= 0)
+                throw new ArgumentOutOfRangeException(nameof(damage), "Damage MUST be positive!");
+            Damage = damage;
+        }
+
+        public override void Collect(Player player)
+        {
+            player.InventoryAdd(this);
+            Console.WriteLine($"{player.Name} picked up {Name} ({Damage} damage)!");
+        }
+    }
+
+    public class Potion : Item
+    {
+        public int AmountOfHealing { get; }
+
+        public Potion(string name, int quantity) : base(name)
+        {
+            if (quantity <= 0)
+                throw new ArgumentOutOfRangeException(nameof(quantity), "Quantity must be positive!");
+            AmountOfHealing = quantity;
+        }
+
+        public override void Collect(Player player)
+        {
+            player.InventoryAdd(this);
+            Console.WriteLine($"{player.Name} picked up {Name} (heals {AmountOfHealing})!");
+        }
+    }
+
+    public class Key : Item
+    {
+        public Key(string name) : base(name) { }
+
+        public override void Collect(Player player)
+        {
+            player.InventoryAdd(this);
+            Console.WriteLine($"{player.Name} picked up the {Name}!");
+        }
+    }
+
+    public class Scroll : Item
+    {
+        public string Context { get; }
+
+        public Scroll(string name, string context) : base(name)
+        {
+            Context = context;
+        }
+
+        public override void Collect(Player player)
+        {
+            player.InventoryAdd(this);
+            Console.WriteLine($"{player.Name} found {Name}: {Context}");
+        }
+    }
+
+    public class Room
+    {
+        public string Description { get; }
+        public bool ContainsTrap { get; set; }
+        public bool ContainsPuzzle { get; set; }
+        public string QuestionInPuzzle { get; set; }
+        public string AnswerOfPuzzle { get; set; }
+        public List<Monster> Monsters { get; } = new();
+        public List<Item> Items { get; } = new();
+        public Dictionary<string, Room> Adjacent { get; } = new();
+
+        public Room(string description)
+        {
+            if (string.IsNullOrWhiteSpace(description))
+                throw new ArgumentException("Room description required!", nameof(description));
+            Description = description;
+        }
+
+        public void ContentsDescription()
+        {
+            Console.WriteLine($"\nThe description of the room is :{Description}\n");
+            if(Monster.Any())
+            {
+                Console.WriteLine("The monsters present in this room are: ");
+                foreach (var m in Monsters)
+                {
+                    Console.WriteLine($"{m.Name} has {m.Health} health points.");
+
+                }
+            }
+
+            else
+            {
+                Console.WriteLine("NO monsters are present here! ");
+
+            }
+
+            if (Items.Any())
+            {
+                Console.WriteLine("The items here are :");
+                foreach (var i in Items)
+                {
+                    Console.WriteLine($"{i.Name} has a type of {i.GetType().Name}");
+                }
+            }
+
+            else
+            {
+                Console.WriteLine("NO items are present here! ");
+            }
+            Console.WriteLine();
+        }
+    }
+
+    public class GameMap
+    {
+        public ReadOnlyCollection<Room> Rooms { get; }
+        public Room Present { get; private set; }
+
+        internal GameMap(List<Room> rooms)
+        {
+            if (rooms == null || rooms.Count == 0)
+                throw new ArgumentException("Rooms are required!", nameof(rooms));
+            Rooms = new ReadOnlyCollection<Room>(rooms);
+            Present = rooms[0];
+        }
+
+        public void Move(string direction)
+        {
+            if (!Present.Adjacent.TryGetValue(direction, out var next))
+                throw new InvalidOperationException("Can't move in that direction!");
+            Present = next;
+        }
+    }
+
+    public static class GameMapMechanism
+    {
+        private static readonly List<string> _descriptions = new()
+        {
+            "A wet cave with glowing crystals",
+            "A messy school library with scattered books",
+            "A massive hall with torn walls",
+            "A  dark, narrow corridor with bats everywhere ",
+            "A haunted house with terrifying sounds being heard",
+            "A small room with droplets of blood on the floor",
+            "An isolated bungalow with the sound of the wind weezing from the window",
+        };
+
+        public static GameMap CreateDefault(int totalRooms = 7)
+        {
+            var rng = ProvideRandom.Instance;
+            var rooms = new List<Room>();
+
+            for (int i = 0; i < totalRooms; i++)
+            {
+                string description = _descriptions[rng.Next(_descriptions.Count)];
+                rooms.Add(new Room(description));
+            }
+
+            for (int i = 0; i < rooms.Count; i++)
+            {
+                if (i < rooms.Count - 1) rooms[i].Adjacent["Right"] = rooms[i + 1];
+                if (i > 0) rooms[i].Adjacent["Left"] = rooms[i - 1];
+            }
+
+            var weaponList = new List<Weapon>
+            {
+                new Weapon("Sword", rng.Next(6,20)),
+                new Weapon("Axe", rng.Next(16,30)),
+                new Weapon("Dagger", rng.Next(6,10)),
+                new Weapon("Knife", rng.Next(3,12))
+            };
+
+            var potionList = new List<Potion>
+            {
+                new Potion("Health Potion", rng.Next(15,40)),
+                new Potion("Max Potion", rng.Next(19,30)),
+                new Potion("Stamina Potion", rng.Next(16,50))
+            };
+
+            foreach (var room in rooms)
+            {
+                for (int n = 0; n < rng.Next(4); n++)
+                {
+                    room.Monsters.Add(rng.Next(4) switch
+                    {
+                        0 => new Snake(),
+                        1 => new Bat(),
+                        2 => new Goblin(),
+                        _ => new Troll(),
+                    });
+                }
+
+                for (int n = 0; n < rng.Next(4); n++)
+                {
+                    room.Items.Add(rng.Next(4) switch
+                    {
+                        0 => weaponList[rng.Next(weaponList.Count)],
+                        1 => potionList[rng.Next(potionList.Count)],
+                        2 => new Key("Golden Key"),
+                        _ => new Scroll("Magic Scroll", "Seek help to proceed!"),
+                    });
+                }
+            }
+
+            if (rooms.Count > 0) rooms[0].ContainsTrap = true;
+            if (rooms.Count > 1)
+            {
+                var room = rooms[1];
+                room.ContainsPuzzle = true;
+                room.QuestionInPuzzle = "What has hands but can't clap?";
+                room.AnswerOfPuzzle = "clock";
+            }
+
+            return new GameMap(rooms);
+        }
+    }
+
+    public static class ManageSaveLoad
+    {
+        private static readonly JsonSerializerOptions Options = new()
+        {
+            WriteIndented = true,
+            ReferenceHandler = ReferenceHandler.Preserve
+        };
+
+        private class State
+        {
+            public GameMap Map { get; set; }
+            public Player Player { get; set; }
+        }
+
+        public static void Save(string path, GameMap map, Player player)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                throw new ArgumentException("Path is required!");
+            var state = new State { Map = map, Player = player };
+            File.WriteAllText(path, JsonSerializer.Serialize(state, Options));
+        }
+
+        public static (GameMap, Player) Load(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                throw new ArgumentException("Path is required!");
+            var json = File.ReadAllText(path);
+            var state = JsonSerializer.Deserialize<State>(json, Options) ?? throw new InvalidOperationException("Deserialization failed!");
+            return (state.Map, state.Player);
+        }
+    }
+
+    public static class Program
+    {
+        private static string GetPosition(GameMap map, Player player) =>
+            $"Location: {map.Present.Description} | Health: {player.Health}/{player.MaximumHealth} | Score: {player.totalScore} | Level: {player.Level}";
+
+        public static void Main()
+        {
+            var map = GameMapMechanism.CreateDefault();
+            var player = new Player();
+
+            Console.WriteLine("Welcome to a new adventure in  Dungeon Explorer!");
+
+            while (player._Alive)
+            {
+                Console.WriteLine(GetPosition(map, player));
+                if (map.Present.ContainsPuzzle)
+                {
+                    Console.WriteLine($"Puzzle: {map.Present.QuestionInPuzzle}");
+                    Console.Write("Answer: ");
+                    var answer = Console.ReadLine()?.Trim().ToLower();
+                    if (answer == map.Present.AnswerOfPuzzle.ToLower())
+                    {
+                        Console.WriteLine("Correct! You solved the puzzle!");
+                        player.GainScore(50);
+                        map.Present.ContainsPuzzle = false;
+                    }
+                    else
+                    {
+                        Console.WriteLine("Incorrect answer! Try again later!");
+                        continue;
+                    }
+                }
+
+                map.Present.ContentsDescription();
+
+                Console.WriteLine("\nStrongest monster in the room:");
+                map.Present.Monsters
+                    .OrderByDescending(m => m.Health)
+                    .ToList()
+                    .ForEach(m => Console.WriteLine($"{m.Name}: {m.Health} HealthPoints"));
+                Console.WriteLine(map.Present.Monsters);
+
+                Console.WriteLine("\nItems in room (grouped by type):");
+                map.Present.Items
+                    .GroupBy(i => i.GetType().Name)
+                    .ToList()
+                    .ForEach(g => Console.WriteLine($"{g.Key}: {g.Count()}"));
+                Console.WriteLine(map.Present.Items);
+
+                Console.Write("\nWhat do you want to do? (move [Left/Right], attack, pickup [itemname], use [potionname], save, load, exit): ");
+                var input = Console.ReadLine()?.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+                if (input == null || input.Length == 0) continue;
+
+                try
+                {
+                    switch (input[0].ToLower())
+                    {
+                        case "move":
+                            if (input.Length < 2)
+                                throw new ArgumentException("Direction required!");
+                            map.Move(input[1]);
+                            break;
+
+                        case "attack":
+                            {
+                                var mon = map.Present.Monsters.FirstOrDefault()
+                                    ?? throw new InvalidOperationException("No monsters to attack!");
+                                player.Attack(mon);
+                                if (!mon._Alive)
+                                {
+                                    player.GainScore(mon.Health > 50 ? 50 : 20);
+                                    map.Present.Monsters.Remove(mon);
+                                    Console.WriteLine("Monster defeated!");
+                                }
+                                break;
+                            }
+
+                        case "pickup":
+                            if (input.Length < 2)
+                                throw new ArgumentException("Item name required!");
+                            var itm = map.Present.Items.FirstOrDefault(i => i.Name.Equals(input[1], StringComparison.OrdinalIgnoreCase))
+                                ?? throw new InvalidOperationException("Item not found!");
+                            itm.Collect(player);
+                            map.Present.Items.Remove(itm);
+                            break;
+
+                        case "use":
+                            if (input.Length < 2)
+                                throw new ArgumentException("Potion name required!");
+                            var potion = player.Inventory.OfType<Potion>()
+                                .FirstOrDefault(p => p.Name.Equals(input[1], StringComparison.OrdinalIgnoreCase))
+                                ?? throw new InvalidOperationException("Potion not found!");
+                            player.Heal(potion.AmountOfHealing);
+                            player.InventoryRemove(potion);
+                            break;
+
+                        case "save":
+                            ManageSaveLoad.Save("Save.json", map, player);
+                            Console.WriteLine("Game saved successfully!");
+                            break;
+
+                        case "load":
+                            (map, player) = ManageSaveLoad.Load("Save.json");
+                            Console.WriteLine("Game loaded successfully!");
+                            break;
+
+                        case "exit":
+                            Console.WriteLine("Exiting game. Goodbye!");
+                            return;
+
+                        default:
+                            Console.WriteLine("Invalid input!  Try again.");
+                            break;
+                    }
+
+                    if (player.totalScore >= 600)
+                    {
+                        Console.WriteLine("\nCongratulations! You WON the Dungeon Explorer game!");
+                        break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Error] {ex.Message}");
+                }
+            }
+
+            if (!player._Alive)
+            {
+                Console.WriteLine("\nYou have fallen in battle. Game Over!");
+            }
+        }
+    }
+}
+
