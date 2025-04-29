@@ -8,16 +8,32 @@ using System.Text.Json.Serialization;
 
 namespace DungeonExplorer
 {
+    ///<summary>
+    /// Consistent randomisation innstance (which provides a single and shared <see cref="Random"/>)
+    /// </summary>
+    
     public static class ProvideRandom
     {
+        /// <summary>
+        /// Singleton <see cref="Random"/> instance is acheived.
+        /// </summary>
+        
         public static Random Instance { get; } = new Random();
     }
+
+    ///<summary>
+    /// Representation of an item to be collected by <see cref="Player"/>.
+    /// </summary>
 
     public interface ICollectible
     {
         string Name { get; }
         void Collect(Player player);
     }
+
+    ///<summary>
+    /// Representation of an object that can accept damage and tracks its health
+    /// </summary>
 
     public interface IDamageable
     {
@@ -506,7 +522,7 @@ namespace DungeonExplorer
     public static class Program
     {
         private static string GetPosition(GameMap map, Player player) =>
-            $"Location: {map.Present.Description} | Health: {player.Health}/{player.MaximumHealth} | Score: {player.totalScore} | Level: {player.Level}";
+            $"Location: {map.Present.Description} , Health: {player.Health}/{player.MaximumHealth} , Score: {player.totalScore} , Level: {player.Level}";
 
         public static void Main()
         {
