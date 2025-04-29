@@ -480,7 +480,7 @@ namespace DungeonExplorer
             //Automated tests before game start!
             Console.WriteLine("Automated tests are running .");
             Testing.RunAll();
-            
+
             var map = GameMapMechanism.CreateDefault();
             var player = new Player();
 
@@ -592,7 +592,7 @@ namespace DungeonExplorer
 
                     if (player.totalScore >= 600)
                     {
-                        Console.WriteLine("\nCongratulations! You WON the Dungeon Explorer game!");
+                        Console.WriteLine("\nCongratulations! You WON game!");
                         break;
                     }
                 }
@@ -604,7 +604,7 @@ namespace DungeonExplorer
 
             if (!player._Alive)
             {
-                Console.WriteLine("\nYou have fallen in battle. Game Over!");
+                Console.WriteLine("\nHard luck! You LOST! Game Over!");
             }
         }
     }
