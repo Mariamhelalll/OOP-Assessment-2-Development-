@@ -5,20 +5,21 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Newtonsoft.Json;
+using System.Net.Http.Json;
+using System.Xml;
 
 namespace DungeonExplorer
 {
     ///<summary>
     /// Consistent randomisation innstance (which provides a single and shared <see cref="Random"/>)
     /// </summary>
-    
+
     public static class ProvideRandom
     {
         /// <summary>
         /// Singleton <see cref="Random"/> instance is acheived.
         /// </summary>
-        
+
         public static Random Instance { get; } = new Random();
     }
 
@@ -68,7 +69,7 @@ namespace DungeonExplorer
             Name = name;
             HealthPoints = startingHealth;
         }
-        
+
         ///<summary>
         /// Damage class which handles damage value
         /// </summary>
@@ -78,7 +79,7 @@ namespace DungeonExplorer
                 throw new ArgumentOutOfRangeException(nameof(value), "Damage value MUST be positive!"); //Error handling(must be positive integer).
             HealthPoints = Math.Max(0, HealthPoints - value);//Use of statistics class (Math.Max) to calculate the final total of health points.
         }
-        
+
         ///<summary>
         /// A method to initiate an attack on the target.
         /// </summary>
@@ -95,14 +96,22 @@ namespace DungeonExplorer
     {
         private readonly List<ICollectible> inventory = new();
         public IReadOnlyList<ICollectible> Inventory => inventory;
-        public int totalScore { get; private set; }
-        public int Level { get; private set; }
-        public int MaximumHealth { get; private set;}
+        public int totalScore { get;  set; }
+        public int Level { get;  set; }
+        public int MaximumHealth { get;  set; }
+
+
+        public Player() : base ("Gamer" ,100)
+        {
+            totalScore = 0;
+            Level = 1;
+            MaximumHealth = 100;
+        }
 
         ///<summary>
         ///constructor creating a player's name, health and current level status.
         /// </summary>
-        
+
         public Player(string name = "Gamer", int health = 100, int initialLevel = 1) : base(name, health)
         {
             if (initialLevel < 1)
@@ -110,11 +119,11 @@ namespace DungeonExplorer
             Level = initialLevel;
             MaximumHealth = health;
         }
-        
+
         ///<summary>
         /// A method which adds up the total score and levels up when  the threshold : (totalScore >= Level * 100) , is acheived.
         /// </summary>
-        
+
         public void GainScore(int result)
         {
             if (result <= 0)
@@ -176,29 +185,29 @@ namespace DungeonExplorer
                 throw new ArgumentNullException(nameof(item));
             inventory.Add(item);
         }
-        
+
         ///<summary>
         /// method to remove item from inventory
         /// </summary>
         public bool InventoryRemove(ICollectible item) => item != null && inventory.Remove(item);
     }
-    
+
     ///<summary>
     /// A base class for all monsters, with varying strength and a feature of fleeing logic.
     /// </summary>
-    
+
     public abstract class Monster : Creature
     {
         protected int Power { get; }
-        
+
         //initializes a monster's name, health and power.
-        protected Monster(string name, int health, int power) : base(name, health) 
+        protected Monster(string name, int health, int power) : base(name, health)
         {
             if (power <= 0)
                 throw new ArgumentOutOfRangeException(nameof(power), "Power MUST be positive!"); // Error handling
             Power = power;
         }
-        
+
         // Dynamic polymorphism : A fleeing fearure logic is applied when 30% of the monster's strength is acheived.
         public override void Attack(IDamageable target)
         {
@@ -214,11 +223,11 @@ namespace DungeonExplorer
                 Strike(target);
             }
         }
-        
+
         ///<summary>
         /// A method defining the default strike behaviour
         /// </summary>
-        
+
         protected virtual void Strike(IDamageable target)
         {
             Console.WriteLine($"{Name} strikes with {Power} power!");
@@ -227,13 +236,13 @@ namespace DungeonExplorer
 
         public void DoStrike(IDamageable target) => Strike(target);
     }
-    
+
     // Snake monster
     public class Snake : Monster
     {
         //Constructor
         public Snake() : base("Snake", 30, 20) { }
-        
+
         // Applies a specific attack  when in action .
         public override void Attack(IDamageable target)
         {
@@ -247,7 +256,7 @@ namespace DungeonExplorer
     {
         //Constructor
         public Bat() : base("Bat", 100, 25) { }
-        
+
         //Applies a specific strike when in action .
         protected override void Strike(IDamageable target)
         {
@@ -275,7 +284,7 @@ namespace DungeonExplorer
     {
         //Constructor
         public Troll() : base("Troll", 200, 60) { }
-        
+
         //Applies a specific strike when in action.
         protected override void Strike(IDamageable target)
         {
@@ -283,7 +292,7 @@ namespace DungeonExplorer
             base.Strike(target);
         }
     }
-    
+
     //Item abstract class with subclasses branching from it which inherits its features.
     // Sets name of item 
     public abstract class Item : ICollectible
@@ -299,7 +308,7 @@ namespace DungeonExplorer
         // Method to collect items.
         public abstract void Collect(Player player);
     }
-    
+
     // Weapon subclass (creates a weapon with its name and damage value).
     public class Weapon : Item
     {
@@ -312,7 +321,7 @@ namespace DungeonExplorer
                 throw new ArgumentOutOfRangeException(nameof(damage), "Damage MUST be positive!"); //Error handling
             Damage = damage;
         }
-        
+
         //Applying "Collect" method logic. (Dynamic polymorohism).
         public override void Collect(Player player)
         {
@@ -320,12 +329,12 @@ namespace DungeonExplorer
             Console.WriteLine($"{player.Name} picked up {Name} ({Damage} damage)!");
         }
     }
-    
+
     //Potion subclass (Sets potion's name and healing value).
     public class Potion : Item
     {
         public int AmountOfHealing { get; }
-        
+
         //Constructor
         public Potion(string name, int quantity) : base(name)
         {
@@ -340,13 +349,13 @@ namespace DungeonExplorer
             Console.WriteLine($"{player.Name} picked up {Name} (heals {AmountOfHealing})!");
         }
     }
-    
+
     // Key subclass
     public class Key : Item
     {
         //Constructor
         public Key(string name) : base(name) { }
-        
+
         //Dynamic polymorphism (Applying "Collect" method logic with overriding).
         public override void Collect(Player player)
         {
@@ -354,18 +363,18 @@ namespace DungeonExplorer
             Console.WriteLine($"{player.Name} picked up the {Name}!");
         }
     }
-    
+
     //Scroll subclass
     public class Scroll : Item
     {
         public string Context { get; }
-        
+
         //Constructor
         public Scroll(string name, string context) : base(name)
         {
             Context = context;
         }
-        
+
         //Dynamic polymorphism (Applying "Collect" method logic with overriding).
         public override void Collect(Player player)
         {
@@ -381,11 +390,23 @@ namespace DungeonExplorer
         public bool ContainsPuzzle { get; set; }
         public string QuestionInPuzzle { get; set; }
         public string AnswerOfPuzzle { get; set; }
-        public List<Monster> Monsters { get; } = new();
-        public List<Item> Items { get; } = new();
-        public Dictionary<string, Room> Adjacent { get; } = new();
+        public List<Monster> Monsters { get; set; } = new();
+        public List<Item> Items { get; set; } = new();
+        public Dictionary<string, Room> Adjacent { get; set; } = new();
 
-        public Room(string description)
+        public Room()
+        {
+            Description = string.Empty;
+            ContainsTrap = false;
+            ContainsPuzzle = false;
+            QuestionInPuzzle = string.Empty;
+            AnswerOfPuzzle = string.Empty;
+            Monsters = new List<Monster>();
+            Items = new List<Item>();
+            Adjacent = new Dictionary<string, Room>();
+        }
+
+        public Room(string description) :this()
         {
             if (string.IsNullOrWhiteSpace(description))
                 throw new ArgumentException("Room description required!", nameof(description));
@@ -430,10 +451,16 @@ namespace DungeonExplorer
 
     public class GameMap
     {
-        public ReadOnlyCollection<Room> Rooms { get; }
-        public Room Present { get; private set; }
+        public ReadOnlyCollection<Room> Rooms { get; set; }
+        public Room Present { get;  set; }
 
-        internal GameMap(List<Room> rooms)
+        public GameMap()
+        {
+            Rooms = new ReadOnlyCollection<Room>(new List<Room>());
+            Present = null;
+        }
+
+        public GameMap(List<Room> rooms)
         {
             if (rooms == null || rooms.Count == 0)
                 throw new ArgumentException("Rooms are required!", nameof(rooms));
@@ -489,9 +516,9 @@ namespace DungeonExplorer
 
             var potionList = new List<Potion>
             {
-                new Potion("Health Potion", rng.Next(15,40)),
-                new Potion("Max Potion", rng.Next(19,30)),
-                new Potion("Stamina Potion", rng.Next(16,50))
+                new Potion("Health", rng.Next(15,40)),
+                new Potion("Max", rng.Next(19,30)),
+                new Potion("Stamina ", rng.Next(16,50))
             };
 
             foreach (var room in rooms)
@@ -540,12 +567,7 @@ namespace DungeonExplorer
             ReferenceHandler = ReferenceHandler.Preserve
         };
 
-        private static readonly JsonSerializerSettings Settings = new()
-        {
-            TypeNameHandling           = TypeNameHandling.Auto,
-            PreserveReferenceHandling  = PreserveReferenceHandling.Objects,
-            Formatting                 = Formatting.Indented
-        };
+        
 
         private class State
         {
@@ -559,10 +581,7 @@ namespace DungeonExplorer
                 throw new ArgumentException("Path is required!");
             var state = new State { Map = map, Player = player };
             File.WriteAllText(path, JsonSerializer.Serialize(state, Options));
-            var state = new State {Map = map, Player = player};
-            var json = JsonConvert.SerializeObject(state ,  Settings);
-            File.WriteAllText(path , json);
-
+            
         }
 
         public static (GameMap, Player) Load(string path)
@@ -571,8 +590,7 @@ namespace DungeonExplorer
                 throw new ArgumentException("Path is required!");
             var json = File.ReadAllText(path);
             var state = JsonSerializer.Deserialize<State>(json, Options) ?? throw new InvalidOperationException("Deserialization is unsuccessful!");
-            var state = JsonConvert.DeserializeObject<State>(json, Settings)
-                        ?? throw new InvalidOperationException ("Deserialization is unsuccessful !");
+            
             return (state.Map, state.Player);
         }
     }
@@ -612,14 +630,14 @@ namespace DungeonExplorer
 
     public static class Program
     {
-        private static string GetPosition(GameMap map, Player player) 
+        private static string GetPosition(GameMap map, Player player)
         {
             int roomNumber = map.Rooms.IndexOf(map.Present) + 1;
             return $"Room number: {roomNumber} , Description: {map.Present.Description} , " +
                    $"Health : {player.Health} / {player.MaximumHealth} , " +
                    $" Total score : {player.totalScore} , Level : {player.Level} . ";
         }
-            
+
         public static void Main()
         {
             //Automated tests before game start!
@@ -651,10 +669,10 @@ namespace DungeonExplorer
                         continue;
                     }
                 }
-                 if (map.Present.ContainsTrap)
-                 {
+                if (map.Present.ContainsTrap)
+                {
                     const int trapDamage = 10;
-                    Console.WriteLine("You fell into the trap! " + trapDamage + "damage!");
+                    Console.WriteLine("You fell into the trap! " + trapDamage +  " " + "damage!");
                     player.Damage(trapDamage);
                     map.Present.ContainsTrap = false; // only one trigger.
                     if (!player._Alive)
@@ -662,7 +680,7 @@ namespace DungeonExplorer
                         Console.WriteLine("\nA trap killed you ! Game over !");
                         return;
                     }
-                 }
+                }
 
                 map.Present.ContentsDescription();
 
@@ -671,16 +689,16 @@ namespace DungeonExplorer
                     .OrderByDescending(m => m.Health)
                     .ToList()
                     .ForEach(m => Console.WriteLine($"{m.Name}: {m.Health} HealthPoints"));
-                
+
 
                 Console.WriteLine("\nItems in room (grouped by type):");
                 map.Present.Items
                     .GroupBy(i => i.GetType().Name)
                     .ToList()
                     .ForEach(g => Console.WriteLine($"{g.Key}: {g.Count()}"));
-                
 
-                Console.Write("\nWhat do you want to do? (move between rooms [Left/Right], attack(for Snake and Goblin monsters), strike (foe Bat and Troll monsters), pickup (itemname), use (potionname), save, load, exit): ");
+
+                Console.Write("\nWhat do you want to do? (move between rooms [Left/Right], attack(for Snake and Goblin monsters), strike (for Bat and Troll monsters), pickup (itemname), use (potionname), save, load, exit, destroy (weapon name): ");
                 var input = Console.ReadLine()?.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
                 if (input == null || input.Length == 0) continue;
@@ -690,18 +708,18 @@ namespace DungeonExplorer
                     switch (input[0].ToLower())
                     {
                         case "strike":
-                        {
-                            var mon = map.Present.Monsters.FirstOrDefault()
-                                     ?? throw new InvalidOperationException ("No monsters to strike!");
-                            mon .DoStrike(player);
-                            if(!mon._Alive)
                             {
-                                player.GainScore(mon.Health > 50 ? 50:20);
-                                map.Present.Monsters.Remove(mon);
-                                Console.WriteLine("Monster defeated!");
-                            }  
-                            break;       
-                        }
+                                var mon = map.Present.Monsters.FirstOrDefault()
+                                         ?? throw new InvalidOperationException("No monsters to strike!");
+                                mon.DoStrike(player);
+                                if (!mon._Alive)
+                                {
+                                    player.GainScore(mon.Health > 50 ? 50 : 20);
+                                    map.Present.Monsters.Remove(mon);
+                                    Console.WriteLine("Monster defeated!");
+                                }
+                                break;
+                            }
                         case "move":
                             if (input.Length < 2)
                                 throw new ArgumentException("Direction required!");
@@ -728,8 +746,8 @@ namespace DungeonExplorer
                             var itemName = string.Join(" ", input.Skip(1));
                             var itm = map.Present.Items
                                 .FirstOrDefault(i => i.Name
-                                          .Equals(itemName , StringComparison.OrdinalIgnoreCase))
-                                ?? throw new InvalidOperationException($"Item {itemName} is NOT found!");     
+                                          .Equals(itemName, StringComparison.OrdinalIgnoreCase))
+                                ?? throw new InvalidOperationException($"Item {itemName} is NOT found!");
                             itm.Collect(player);
                             map.Present.Items.Remove(itm);
                             break;
@@ -737,13 +755,49 @@ namespace DungeonExplorer
                         case "use":
                             if (input.Length < 2)
                                 throw new ArgumentException("Potion name required!");
-                            var potionName = string.Join(" ", input.Skip(1));    
+                            var potionName = string.Join(" ", input.Skip(1));
                             var potion = player.Inventory.OfType<Potion>()
                                 .FirstOrDefault(p => p.Name.Equals(potionName, StringComparison.OrdinalIgnoreCase))
                                 ?? throw new InvalidOperationException($"Potion: {potionName} is NOT found!");
                             player.Heal(potion.AmountOfHealing);
                             player.InventoryRemove(potion);
                             break;
+
+                        case "destroy":
+                            {
+                                if (input.Length < 2)
+                                    throw new ArgumentException("Weapon name required!");
+
+                        
+                                var weaponName = string.Join(" ", input.Skip(1));
+                                var weapon = player.Inventory
+                                                   .OfType<Weapon>()
+                                                   .FirstOrDefault(w =>
+                                                       w.Name.Equals(weaponName, StringComparison.OrdinalIgnoreCase))
+                                             ?? throw new InvalidOperationException($"Weapon '{weaponName}' is NOT found!");
+
+                                
+                                var monster = map.Present.Monsters
+                                                 .FirstOrDefault()
+                                             ?? throw new InvalidOperationException("No monsters to destroy!");
+
+                               
+                                Console.WriteLine($"{player.Name} uses {weapon.Name} to hit {monster.Name} for {weapon.Damage} damage!");
+                                monster.Damage(weapon.Damage);
+
+                                
+                                if (!monster._Alive)
+                                {
+                                    map.Present.Monsters.Remove(monster);
+                                    int earned = monster.Health > 50 ? 50 : 20;
+                                    player.GainScore(earned);
+                                    Console.WriteLine($"{monster.Name} is destroyed! You earned {earned} points.");
+                                }
+
+                                break;
+                            }
+
+
 
                         case "save":
                             ManageSaveLoad.Save("Save.json", map, player);
