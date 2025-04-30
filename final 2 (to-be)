@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Newtonsoft.Json;
 
 namespace DungeonExplorer
 {
@@ -539,6 +540,13 @@ namespace DungeonExplorer
             ReferenceHandler = ReferenceHandler.Preserve
         };
 
+        private static readonly JsonSerializerSettings Settings = new()
+        {
+            TypeNameHandling           = TypeNameHandling.Auto,
+            PreserveReferenceHandling  = PreserveReferenceHandling.Objects,
+            Formatting                 = Formatting.Indented
+        };
+
         private class State
         {
             public GameMap Map { get; set; }
@@ -551,6 +559,10 @@ namespace DungeonExplorer
                 throw new ArgumentException("Path is required!");
             var state = new State { Map = map, Player = player };
             File.WriteAllText(path, JsonSerializer.Serialize(state, Options));
+            var state = new State {Map = map, Player = player};
+            var json = JsonConvert.SerializeObject(state ,  Settings);
+            File.WriteAllText(path , json);
+
         }
 
         public static (GameMap, Player) Load(string path)
@@ -558,7 +570,9 @@ namespace DungeonExplorer
             if (string.IsNullOrWhiteSpace(path))
                 throw new ArgumentException("Path is required!");
             var json = File.ReadAllText(path);
-            var state = JsonSerializer.Deserialize<State>(json, Options) ?? throw new InvalidOperationException("Deserialization failed!");
+            var state = JsonSerializer.Deserialize<State>(json, Options) ?? throw new InvalidOperationException("Deserialization is unsuccessful!");
+            var state = JsonConvert.DeserializeObject<State>(json, Settings)
+                        ?? throw new InvalidOperationException ("Deserialization is unsuccessful !");
             return (state.Map, state.Player);
         }
     }
@@ -598,9 +612,14 @@ namespace DungeonExplorer
 
     public static class Program
     {
-        private static string GetPosition(GameMap map, Player player) =>
-            $"Location: {map.Present.Description} , Health: {player.Health}/{player.MaximumHealth} , Score: {player.totalScore} , Level: {player.Level}";
-
+        private static string GetPosition(GameMap map, Player player) 
+        {
+            int roomNumber = map.Rooms.IndexOf(map.Present) + 1;
+            return $"Room number: {roomNumber} , Description: {map.Present.Description} , " +
+                   $"Health : {player.Health} / {player.MaximumHealth} , " +
+                   $" Total score : {player.totalScore} , Level : {player.Level} . ";
+        }
+            
         public static void Main()
         {
             //Automated tests before game start!
@@ -652,14 +671,14 @@ namespace DungeonExplorer
                     .OrderByDescending(m => m.Health)
                     .ToList()
                     .ForEach(m => Console.WriteLine($"{m.Name}: {m.Health} HealthPoints"));
-                Console.WriteLine(map.Present.Monsters);
+                
 
                 Console.WriteLine("\nItems in room (grouped by type):");
                 map.Present.Items
                     .GroupBy(i => i.GetType().Name)
                     .ToList()
                     .ForEach(g => Console.WriteLine($"{g.Key}: {g.Count()}"));
-                Console.WriteLine(map.Present.Items);
+                
 
                 Console.Write("\nWhat do you want to do? (move between rooms [Left/Right], attack(for Snake and Goblin monsters), strike (foe Bat and Troll monsters), pickup (itemname), use (potionname), save, load, exit): ");
                 var input = Console.ReadLine()?.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -706,8 +725,11 @@ namespace DungeonExplorer
                         case "pickup":
                             if (input.Length < 2)
                                 throw new ArgumentException("Item name required!");
-                            var itm = map.Present.Items.FirstOrDefault(i => i.Name.Equals(input[1], StringComparison.OrdinalIgnoreCase))
-                                ?? throw new InvalidOperationException("Item not found!");
+                            var itemName = string.Join(" ", input.Skip(1));
+                            var itm = map.Present.Items
+                                .FirstOrDefault(i => i.Name
+                                          .Equals(itemName , StringComparison.OrdinalIgnoreCase))
+                                ?? throw new InvalidOperationException($"Item {itemName} is NOT found!");     
                             itm.Collect(player);
                             map.Present.Items.Remove(itm);
                             break;
@@ -715,9 +737,10 @@ namespace DungeonExplorer
                         case "use":
                             if (input.Length < 2)
                                 throw new ArgumentException("Potion name required!");
+                            var potionName = string.Join(" ", input.Skip(1));    
                             var potion = player.Inventory.OfType<Potion>()
-                                .FirstOrDefault(p => p.Name.Equals(input[1], StringComparison.OrdinalIgnoreCase))
-                                ?? throw new InvalidOperationException("Potion not found!");
+                                .FirstOrDefault(p => p.Name.Equals(potionName, StringComparison.OrdinalIgnoreCase))
+                                ?? throw new InvalidOperationException($"Potion: {potionName} is NOT found!");
                             player.Heal(potion.AmountOfHealing);
                             player.InventoryRemove(potion);
                             break;
@@ -733,7 +756,7 @@ namespace DungeonExplorer
                             break;
 
                         case "exit":
-                            Console.WriteLine("Exiting game. Goodbye!");
+                            Console.WriteLine("Exit in progress. Goodbye!");
                             return;
 
                         default:
