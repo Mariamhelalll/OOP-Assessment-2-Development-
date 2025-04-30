@@ -223,13 +223,15 @@ namespace DungeonExplorer
             Console.WriteLine($"{Name} strikes with {Power} power!");
             target.Damage(Power);
         }
+
+        public void DoStrike(IDamageable target) => Strike(target);
     }
     
     // Snake monster
     public class Snake : Monster
     {
         //Constructor
-        public Snake() : base("Snake", 30, 5) { }
+        public Snake() : base("Snake", 30, 20) { }
         
         // Applies a specific attack  when in action .
         public override void Attack(IDamageable target)
@@ -656,6 +658,19 @@ namespace DungeonExplorer
                 {
                     switch (input[0].ToLower())
                     {
+                        case "strike":
+                        {
+                            var mon = map.Present.Monsters.FirstOrDefault()
+                                     ?? throw new InvalidOperationException ("No monsters to strike!");
+                            mon .DoStrike(player);
+                            if(!mon._Alive)
+                            {
+                                player.GainScore(mon.Health > 50 ? 50:20);
+                                map.Present.Monsters.Remove(mon);
+                                Console.WriteLine("Monster defeated!");
+                            }  
+                            break;       
+                        }
                         case "move":
                             if (input.Length < 2)
                                 throw new ArgumentException("Direction required!");
