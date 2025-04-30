@@ -42,6 +42,10 @@ namespace DungeonExplorer
         void Damage(int damage);
     }
 
+    ///<summary>
+    /// Base class for creatures, which handles health tracking and attacks
+    /// </summary>
+
     public abstract class Creature : IDamageable
     {
         protected int HealthPoints;
@@ -49,30 +53,42 @@ namespace DungeonExplorer
         public int Health => HealthPoints;
         public bool _Alive => HealthPoints > 0;
 
-
+        /// <summary>
+        /// initialzes a new "Creature" with a starting health and a name.
+        /// </summary>
 
         protected Creature(string name, int startingHealth)
         {
             if (string.IsNullOrWhiteSpace(name))
-                throw new ArgumentException("Name is required:", nameof(name));
+                throw new ArgumentException("Name is required:", nameof(name)); // Error handling for name
             if (startingHealth <= 0)
-                throw new ArgumentOutOfRangeException(nameof(startingHealth), "Health MUST be positive!");
+                throw new ArgumentOutOfRangeException(nameof(startingHealth), "Health MUST be positive!"); // Error handling for health
 
             Name = name;
             HealthPoints = startingHealth;
         }
-
+        
+        ///<summary>
+        /// Damage class which handles damage value
+        /// </summary>
         public virtual void Damage(int value)
         {
             if (value < 0)
-                throw new ArgumentOutOfRangeException(nameof(value), "Damage value MUST be positive!");
-            HealthPoints = Math.Max(0, HealthPoints - value);
+                throw new ArgumentOutOfRangeException(nameof(value), "Damage value MUST be positive!"); //Error handling(must be positive integer).
+            HealthPoints = Math.Max(0, HealthPoints - value);//Use of statistics class (Math.Max) to calculate the final total of health points.
         }
-
+        
+        ///<summary>
+        /// A method to initiate an attack on the target.
+        /// </summary>
         public abstract void Attack(IDamageable target);
 
 
     }
+
+    ///<summary>
+    /// The player class inherits its features from the base class "Creature" , in addition to adding the inventory, scoring scheme, leveling logic and combats.
+    /// </summary>
 
     public class Player : Creature
     {
@@ -82,6 +98,10 @@ namespace DungeonExplorer
         public int Level { get; private set; }
         public int MaximumHealth { get; }
 
+        ///<summary>
+        ///constructor creating a player's name, health and current level status.
+        /// </summary>
+        
         public Player(string name = "Gamer", int health = 100, int initialLevel = 1) : base(name, health)
         {
             if (initialLevel < 1)
@@ -89,7 +109,11 @@ namespace DungeonExplorer
             Level = initialLevel;
             MaximumHealth = health;
         }
-
+        
+        ///<summary>
+        /// A method which adds up the total score and levels up when  the threshold : (totalScore >= Level * 100) , is acheived.
+        /// </summary>
+        
         public void GainScore(int result)
         {
             if (result <= 0)
@@ -102,12 +126,15 @@ namespace DungeonExplorer
                 Console.WriteLine($"Next level: {Level} is achieved!");
             }
         }
-
+        ///<summary>
+        /// Example of dynamic polymorphism: implements its own logic.
+        /// </summary>
+        /// 
         public override void Attack(IDamageable target)
         {
             if (target == null)
                 throw new ArgumentNullException(nameof(target));
-
+            // Use of best weapon trial, if not, base class's damage logic is applied.
             try
             {
                 var weapon = inventory.OfType<Weapon>().OrderByDescending(w => w.Damage).First();
@@ -122,6 +149,10 @@ namespace DungeonExplorer
             }
         }
 
+        ///<summary>
+        ///  heals the health vakue to the maximum health possible.
+        /// </summary>
+
         public void Heal(int heal)
         {
             if (heal < 0)
@@ -132,27 +163,40 @@ namespace DungeonExplorer
             Console.WriteLine($"{Name} healed {HealthPoints - previous} points! ({HealthPoints}/{MaximumHealth})");
         }
 
+        ///<summary>
+        /// method to add item to inventory
+        /// </summary>
+
         public void InventoryAdd(ICollectible item)
         {
             if (item == null)
                 throw new ArgumentNullException(nameof(item));
             inventory.Add(item);
         }
-
+        
+        ///<summary>
+        /// method to remove item from inventory
+        /// </summary>
         public bool InventoryRemove(ICollectible item) => item != null && inventory.Remove(item);
     }
-
+    
+    ///<summary>
+    /// A base class for all monsters, with varying strength and a feature of fleeing logic.
+    /// </summary>
+    
     public abstract class Monster : Creature
     {
         protected int Power { get; }
-
-        protected Monster(string name, int health, int power) : base(name, health)
+        
+        //initializes a monster's name, health and power.
+        protected Monster(string name, int health, int power) : base(name, health) 
         {
             if (power <= 0)
-                throw new ArgumentOutOfRangeException(nameof(power), "Power MUST be positive!");
+                throw new ArgumentOutOfRangeException(nameof(power), "Power MUST be positive!"); // Error handling
             Power = power;
         }
-
+        
+        // Dynamic polymorphism : A fleeing fearure logic is applied when 30% of the monster's strength is acheived.
         public override void Attack(IDamageable target)
         {
             if (target == null)
@@ -167,18 +211,25 @@ namespace DungeonExplorer
                 Strike(target);
             }
         }
-
+        
+        ///<summary>
+        /// A method defining the default strike behaviour
+        /// </summary>
+        
         protected virtual void Strike(IDamageable target)
         {
             Console.WriteLine($"{Name} strikes with {Power} power!");
             target.Damage(Power);
         }
     }
-
+    
+    // Snake monster
     public class Snake : Monster
     {
+        //Constructor
         public Snake() : base("Snake", 30, 5) { }
-
+        
+        // Applies a specific attack  when in action .
         public override void Attack(IDamageable target)
         {
             Console.WriteLine("Snake strikes with venomous fangs!");
@@ -186,10 +237,13 @@ namespace DungeonExplorer
         }
     }
 
+    // Bat monster
     public class Bat : Monster
     {
+        //Constructor
         public Bat() : base("Bat", 100, 25) { }
-
+        
+        //Applies a specific strike when in action .
         protected override void Strike(IDamageable target)
         {
             Console.WriteLine("Bat screeches and attacks!");
@@ -197,10 +251,13 @@ namespace DungeonExplorer
         }
     }
 
+    // Goblin monster
     public class Goblin : Monster
     {
+        //Constructor
         public Goblin() : base("Goblin", 60, 40) { }
 
+        // Applies a specific attack when in action.
         public override void Attack(IDamageable target)
         {
             Console.WriteLine("Goblin attacks sneakily!");
@@ -208,17 +265,22 @@ namespace DungeonExplorer
         }
     }
 
+    //Troll monster
     public class Troll : Monster
     {
+        //Constructor
         public Troll() : base("Troll", 200, 60) { }
-
+        
+        //Applies a specific strike when in action.
         protected override void Strike(IDamageable target)
         {
             Console.WriteLine("Troll smashes heavily!");
             base.Strike(target);
         }
     }
-
+    
+    //Item abstract class with subclasses branching from it which inherits its features.
+    // Sets name of item 
     public abstract class Item : ICollectible
     {
         public string Name { get; }
@@ -226,69 +288,80 @@ namespace DungeonExplorer
         protected Item(string name)
         {
             if (string.IsNullOrWhiteSpace(name))
-                throw new ArgumentException("Name is required!", nameof(name));
+                throw new ArgumentException("Name is required!", nameof(name)); // Error handling
             Name = name;
         }
-
+        // Method to collect items.
         public abstract void Collect(Player player);
     }
-
+    
+    // Weapon subclass (creates a weapon with its name and damage value).
     public class Weapon : Item
     {
         public int Damage { get; }
 
+        //Constructor 
         public Weapon(string name, int damage) : base(name)
         {
             if (damage <= 0)
-                throw new ArgumentOutOfRangeException(nameof(damage), "Damage MUST be positive!");
+                throw new ArgumentOutOfRangeException(nameof(damage), "Damage MUST be positive!"); //Error handling
             Damage = damage;
         }
-
+        
+        //Applying "Collect" method logic. (Dynamic polymorohism).
         public override void Collect(Player player)
         {
             player.InventoryAdd(this);
             Console.WriteLine($"{player.Name} picked up {Name} ({Damage} damage)!");
         }
     }
-
+    
+    //Potion subclass (Sets potion's name and healing value).
     public class Potion : Item
     {
         public int AmountOfHealing { get; }
-
+        
+        //Constructor
         public Potion(string name, int quantity) : base(name)
         {
             if (quantity <= 0)
-                throw new ArgumentOutOfRangeException(nameof(quantity), "Quantity must be positive!");
+                throw new ArgumentOutOfRangeException(nameof(quantity), "Quantity must be positive!"); // Error handling
             AmountOfHealing = quantity;
         }
-
+        // Dynamic polymorphism (Applying "Collect" method logic with overriding).
         public override void Collect(Player player)
         {
             player.InventoryAdd(this);
             Console.WriteLine($"{player.Name} picked up {Name} (heals {AmountOfHealing})!");
         }
     }
-
+    
+    // Key subclass
     public class Key : Item
     {
+        //Constructor
         public Key(string name) : base(name) { }
-
+        
+        //Dynamic polymorphism (Applying "Collect" method logic with overriding).
         public override void Collect(Player player)
         {
             player.InventoryAdd(this);
             Console.WriteLine($"{player.Name} picked up the {Name}!");
         }
     }
-
+    
+    //Scroll subclass
     public class Scroll : Item
     {
         public string Context { get; }
-
+        
+        //Constructor
         public Scroll(string name, string context) : base(name)
         {
             Context = context;
         }
-
+        
+        //Dynamic polymorphism (Applying "Collect" method logic with overriding).
         public override void Collect(Player player)
         {
             player.InventoryAdd(this);
