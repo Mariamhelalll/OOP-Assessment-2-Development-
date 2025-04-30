@@ -649,7 +649,7 @@ namespace DungeonExplorer
                     .ForEach(g => Console.WriteLine($"{g.Key}: {g.Count()}"));
                 Console.WriteLine(map.Present.Items);
 
-                Console.Write("\nWhat do you want to do? (move between rooms [Left/Right], attack, pickup [itemname], use [potionname], save, load, exit): ");
+                Console.Write("\nWhat do you want to do? (move between rooms [Left/Right], attack(for Snake and Goblin monsters), strike (foe Bat and Troll monsters), pickup (itemname), use (potionname), save, load, exit): ");
                 var input = Console.ReadLine()?.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
                 if (input == null || input.Length == 0) continue;
