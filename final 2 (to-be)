@@ -632,6 +632,18 @@ namespace DungeonExplorer
                         continue;
                     }
                 }
+                 if (map.Present.ContainsTrap)
+                 {
+                    const int trapDamage = 10;
+                    Console.WriteLine("You fell into the trap! " + trapDamage + "damage!");
+                    player.Damage(trapDamage);
+                    map.Present.ContainsTrap = false; // only one trigger.
+                    if (!player._Alive)
+                    {
+                        Console.WriteLine("\nA trap killed you ! Game over !");
+                        return;
+                    }
+                 }
 
                 map.Present.ContentsDescription();
 
