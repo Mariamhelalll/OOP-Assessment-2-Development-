@@ -96,7 +96,7 @@ namespace DungeonExplorer
         public IReadOnlyList<ICollectible> Inventory => inventory;
         public int totalScore { get; private set; }
         public int Level { get; private set; }
-        public int MaximumHealth { get; }
+        public int MaximumHealth { get; private set;}
 
         ///<summary>
         ///constructor creating a player's name, health and current level status.
@@ -123,6 +123,8 @@ namespace DungeonExplorer
             while (totalScore >= Level * 100)
             {
                 Level++;
+                MaximumHealth += 30;
+                HealthPoints = MaximumHealth;
                 Console.WriteLine($"Next level: {Level} is achieved!");
             }
         }
