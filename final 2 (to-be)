@@ -885,8 +885,18 @@ namespace DungeonExplorer
                             break;
 
                         case "load":
-                            (map, player) = ManageSaveLoad.Load("Save.json");
-                            Console.WriteLine("Game loaded successfully!");
+                            if (ManageSaveLoad.TryLoad ("Save.json" , out var loadedMap, out var loadedPlayer))
+                            {
+                                map = loadedMap!;
+                                player = loadedPlayer!;
+                                Console.WriteLine("Game is loading is successful!");
+                            }
+
+                            else
+                            {
+                                Console.WriteLine("An error occured: CANNOT load saved file!");
+
+                            }
                             break;
 
                         case "exit":
