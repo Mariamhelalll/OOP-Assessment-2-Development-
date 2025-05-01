@@ -12,6 +12,8 @@ namespace DungeonExplorer
 {
     ///<summary>
     /// Consistent randomisation innstance (which provides a single and shared <see cref="Random"/>)
+    /// Attributes:
+    ///   - Instance: Random {static + read-only)
     /// </summary>
 
     public static class ProvideRandom
@@ -25,6 +27,10 @@ namespace DungeonExplorer
 
     ///<summary>
     /// Representation of an item to be collected by <see cref="Player"/>.
+    ///Attributes:
+    ///   = Name: string {read-only}
+    /// Operations:
+    ///   = Collect(player: Player): void
     /// </summary>
 
     public interface ICollectible
@@ -35,6 +41,11 @@ namespace DungeonExplorer
 
     ///<summary>
     /// Representation of an object that can accept damage and tracks its health
+    ///  Attributes:
+    ///   = Health: int {read-only}
+    ///   = _Alive: bool {read-only}
+    /// Operations:
+    ///   = Damage(damage: int): void
     /// </summary>
 
     public interface IDamageable
@@ -46,6 +57,15 @@ namespace DungeonExplorer
 
     ///<summary>
     /// Base class for creatures, which handles health tracking and attacks
+    ///  <<abstract>> Creature
+    /// Attributes:
+    ///   = HealthPoints: int {protected}
+    ///   = Name: string {read-only}
+    ///   = Health: int {read-only}
+    ///   = _Alive: bool {read-only}
+    /// Operations:
+    ///   = Damage(value: int): void
+    ///   = Attack(target: IDamageable): void {abstract}
     /// </summary>
 
     public abstract class Creature : IDamageable
@@ -56,9 +76,9 @@ namespace DungeonExplorer
         public bool _Alive => HealthPoints > 0;
 
         /// <summary>
-        /// initialzes a new "Creature" with a starting health and a name.
+        /// initialzes a new "Creature" with a starting health and a name (constructor).
         /// </summary>
-
+        
         protected Creature(string name, int startingHealth)
         {
             if (string.IsNullOrWhiteSpace(name))
@@ -586,13 +606,73 @@ namespace DungeonExplorer
 
         public static (GameMap, Player) Load(string path)
         {
-            if (string.IsNullOrWhiteSpace(path))
-                throw new ArgumentException("Path is required!");
-            var json = File.ReadAllText(path);
-            var state = JsonSerializer.Deserialize<State>(json, Options) ?? throw new InvalidOperationException("Deserialization is unsuccessful!");
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+                throw new FileNotFoundException("Saved fille is missing and unfound!");
+
+            try  
+            {
+                using var file = File.OpenRead(path);
+                var state = JsonSerializer.Deserialize<State>(file,Options)
+                            ?? throw new InvalidOperationException("It was found that the deserialized state is null!");
+                return (state.Map , state.Player);            
+            } 
+
+            catch (JsonException ex)
+            {
+                throw new InvalidOperationException("Saved file is invalid!" ,ex);
+            } 
+
+            catch (IOException ex)
+            {
+                throw new InvalidOperationException("Saved file CANNOT be read!");
+            }
+
+
             
-            return (state.Map, state.Player);
         }
+
+
+        public static bool LoadTrial (string path, out GameMap? map , out Player? player)
+        {
+         map =  null;
+         player = null;
+
+         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            {
+             return false;
+            }
+
+         try
+            {
+             using var file = File.OpenRead(path);
+             var state = JsonSerializer.Deserialize<State>(file,Options);
+             if (state == null)
+                {
+                 return false;
+                }
+
+             map   = state.Map;
+             player = state.Player;
+             return true;
+
+
+
+            }
+
+         catch (IOException)
+            {
+              return false;
+            
+            }
+
+         catch (JsonException)
+            {
+             return false;
+            }
+
+        }    
+
+    
     }
 
     public static class Testing
